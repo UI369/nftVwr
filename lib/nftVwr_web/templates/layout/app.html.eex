@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>NftVwr</title>
+    <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
+    <script defer type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+    <script src="https://unpkg.com/@metamask/detect-provider/dist/detect-provider.min.js"></script>
+    <script type="module">
+    
+      // This function detects most providers injected at window.ethereum
+      const provider = await detectEthereumProvider();
+
+      if (provider) {
+        // From now on, this should always be true:
+        // provider === window.ethereum
+        
+
+        const ethereumButton = document.querySelector('.enableEthereumButton');
+        const showAccount = document.querySelector('.showAccount');
+
+        ethereumButton.addEventListener('click', () => {
+          getAccount();
+        });
+
+        async function getAccount() {
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          const account = accounts[0];
+          showAccount.innerHTML = account;
+        }
+      }
+    </script>
+    <style>
+      body {
+        color: #808080;
+        font-family:Monospace;
+        font-size:13px;
+        text-align:center;
+        background-color: #000;
+        margin: 0px;
+        overflow: hidden;
+      }
+      #info {
+        position: absolute;
+        top: 0px; width: 100%;
+        padding: 5px;
+        z-index: 100;
+      }
+      a {
+        color: #0080ff;
+      }
+      b { color: lightgreen }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body{
+        background: #000;
+      }
+
+      #info{
+        position: absolute;
+        color: rgba(255, 255, 255, 0.46);
+        width: 100%;
+        text-align: center;
+        z-index: 1;
+        font-family: sans-serif;
+        font-size: 23px;
+        font-weight: 700;
+        bottom: 2vh;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <section class="container">
+        <nav role="navigation">
+
+            <span><button class="enableEthereumButton">Enable Ethereum</button></span>
+            <h2>Your Account: <span class="showAccount"></span></h2>
+            <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+              <span><%= link "How?", to: Routes.live_dashboard_path(@conn, :home) %></span>
+            <% end %>
+          </ul>
+        </nav>
+        <a href="https://phoenixframework.org/" class="phx-logo">
+          <img src="<%= Routes.static_path(@conn, "/images/nftvwrLogo.png") %>" alt="Phoenix Framework Logo"/>
+        </a>
+      </section>
+    </header>
+    <main role="main" class="container">
+      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+      <%= @inner_content %>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,539 @@
+
+<script src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+<script src="<%= Routes.static_path(@conn, "/js/three.min.js") %>"></script>
+<script src="<%= Routes.static_path(@conn, "/js/tween.min.js") %>"></script>
+<script src="<%= Routes.static_path(@conn, "/js/TrackballControls.js") %>"></script>
+<script src="<%= Routes.static_path(@conn, "/js/CSS3DRenderer.js") %>"></script>
+<script src="<%= Routes.static_path(@conn, "/js/dat.gui.min.js") %>"></script>
+
+<script>
+    var SCREEN_WIDTH = window.innerWidth;
+    var SCREEN_HEIGHT = window.innerHeight;
+    var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+    var container, stats;
+    var camera, scene, renderer, mesh, mesh3;
+    var cameraRig, activeCamera, activeHelper;
+    var cameraPerspective, cameraOrtho;
+    var cameraPerspectiveHelper, cameraOrthoHelper;
+    var frustumSize = 600;
+    var board;
+    var stats;
+    var cards;      
+    var card1;
+    var card2;
+    var margin=3;
+    var cardWidth = 30;
+    var cardHeight = 40;
+    var raycaster = new THREE.Raycaster();
+    var mouse = new THREE.Vector2(), INTERSECTED;
+
+    var vortexGrid = [9,8,7,6,5,3,5,6,7,8,9,
+                      8,7,6,5,4,4,4,5,6,7,8,
+                      7,6,3,4,3,2,3,4,3,6,7,
+                      6,5,4,5,2,1,2,5,4,5,6,
+                      5,4,3,2,1,9,1,2,3,4,5,
+                      3,4,2,1,9,8,9,1,2,4,3,
+                      5,4,3,2,1,9,1,2,3,4,5,
+                      6,5,4,5,2,1,2,5,4,5,6,
+                      7,6,3,4,3,2,3,4,3,6,7,
+                      8,7,6,5,4,4,4,5,6,7,8,
+                      9,8,7,6,5,3,5,6,7,8,9];
+    var colors = [0x8f10d5, 0x051ce6, 0x1cb4e5, 0x00d884, 0x00a302, 0xe5e600, 0xfe8227, 0xff0905, 0xd300cd ];
+
+    window.addEventListener( 'initGame', init, false);
+    window.addEventListener( 'drawBoard', drawBoard, false);
+    //init();
+
+
+    function init(event) {
+      console.log("INIT")
+      initContainer();
+      initScene();
+      addEventListeners();
+      addCameras();
+      addMeshes();
+      addLight();
+      //addStarscape();
+      addRenderer();
+      initChannel();
+      //addStats();
+      addControlsGui();
+
+      animate();
+    }
+
+    function initContainer(){
+      container = document.createElement( 'div' );
+      document.body.appendChild( container );
+    }
+
+    function initScene(){
+        scene = new THREE.Scene();
+    }
+
+    function addEventListeners(){
+      window.addEventListener( 'swapTiles', swapTiles, false);
+      window.addEventListener( 'resize', onWindowResize, false );
+      document.addEventListener( 'keydown', onKeyDown, false );
+      window.addEventListener( 'keyDownU', moveCameraOut, false);
+      window.addEventListener( 'keyDownI', moveCameraIn, false);
+      window.addEventListener( 'keyDownLeft', moveCameraLeft, false);
+      window.addEventListener( 'keyDownRight', moveCameraRight, false);
+      window.addEventListener( 'keyDownUp', moveCameraUp, false);
+      window.addEventListener( 'keyDownDown', moveCameraDown, false);
+      window.addEventListener( 'mousemove', onMouseMove, false );
+    }
+
+    function addCameras(){
+      cameraPerspective = new THREE.PerspectiveCamera( 30, aspect, 1, 20000 );
+      cameraPerspectiveHelper = new THREE.CameraHelper( cameraPerspective );
+      cameraPerspective.position.z = 0;
+      scene.add( cameraPerspectiveHelper );
+      //
+      cameraOrtho = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 150, 3000 );
+      cameraOrthoHelper = new THREE.CameraHelper( cameraOrtho );
+      scene.add( cameraOrthoHelper );
+      //
+      activeCamera = cameraPerspective;
+      activeHelper = cameraPerspectiveHelper;
+
+      //activeCamera = cameraOrtho;
+      //activeHelper = cameraOrthoHelper;
+      // counteract different front orientation of cameras vs rig
+      cameraOrtho.rotation.y = Math.PI;
+      cameraOrtho.rotation.x = 0;
+      cameraOrtho.rotation.z = Math.PI;
+      cameraPerspective.rotation.y = Math.PI;
+      cameraPerspective.rotation.x = 0;
+      cameraPerspective.rotation.z = Math.PI;
+      cameraPerspective.position.z = 0;
+      cameraRig = new THREE.Group();
+      cameraRig.add( cameraPerspective );
+      cameraRig.add( cameraOrtho );
+    
+      scene.add( cameraRig );
+    }
+
+    function addMeshes(){
+      var geometry = new THREE.SphereGeometry( 15, 32, 32 );
+      var material = new THREE.MeshBasicMaterial( {color: 0x000000} );
+      mesh3 = new THREE.Mesh( geometry, material );
+      mesh3.position.z = 0;
+      cameraRig.add( mesh3 );
+      //scene.add(mesh3)
+    }
+
+    function addLight(){
+      var light = new THREE.DirectionalLight( 0xffffff );
+      light.position.set( 0, 2, 1 ).normalize();
+
+      var mesh5 = new THREE.Mesh(
+        new THREE.SphereBufferGeometry( 30, 30, 30 ),
+        new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } )
+      );
+      //light.add(mesh5);
+      scene.add(light);
+    }
+
+    function addRenderer(){
+      renderer = new THREE.WebGLRenderer( { antialias: true } );
+      renderer.setPixelRatio( window.devicePixelRatio );
+      renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+      container.appendChild( renderer.domElement );
+      renderer.autoClear = false;
+    }
+
+    function initChannel() {
+
+      switch (document.readyState){
+        case "loading":
+          console.log("readyState: loading");
+          window.setTimeout(initChannel, 10);
+          break;
+        case "interactive":
+          console.log("readyState: interactive (try again in 10ms)");
+          window.setTimeout(initChannel, 10);
+          break;
+        case "complete":
+          console.log("readyState: complete");
+          var event = new Event("doJoinChannel");  //listener is in socket.js
+          event.channel = 'board';
+          event.channel_id = "1";
+          console.log("firing doJoinChannel");
+          document.dispatchEvent(event);
+          break;
+      }
+    }
+
+    function addControlsGui(){
+      var params = {
+				fov: 50,
+        meshX: 0,
+        meshY: 0,
+        meshZ: 0,
+        cardsLoc: mesh3.position.z
+			};
+
+      var gui = new dat.GUI();
+			gui.add( params, 'fov', 0, 180 ).step( 1 ).onChange( function( value ) {
+        var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+        cameraPerspective.fov = value;
+			});
+
+      gui.add( params, 'meshX', -3, 3 ).step( .000001 ).onChange( function( value ) {
+        mesh.position.x = 1000 * Math.cos( value );
+        mesh.position.z = 1000 * Math.sin( value );
+        mesh.position.y = 1000 * Math.sin( value );
+      });
+
+      gui.add(params, 'cardsLoc', cameraPerspective.near, cameraPerspective.far).step(1).onChange(function(value) {
+        mesh3.position.z = value;
+      })
+
+			gui.open();
+    }
+
+    function animate() {
+      requestAnimationFrame( animate );
+      render();
+      //stats.update();
+    }
+
+    function drawBoard2(event) {
+
+      var table = [
+				"H", "Hydrogen", "1.00794", 1, 1,
+				"He", "Helium", "4.002602", 18, 1,
+				"Li", "Lithium", "6.941", 1, 2,
+				"Be", "Beryllium", "9.012182", 2, 2,
+				"B", "Boron", "10.811", 13, 2,
+				"C", "Carbon", "12.0107", 14, 2,
+				"N", "Nitrogen", "14.0067", 15, 2,
+				"O", "Oxygen", "15.9994", 16, 2,
+				"F", "Fluorine", "18.9984032", 17, 2,
+				"Ne", "Neon", "20.1797", 18, 2,
+				"Na", "Sodium", "22.98976...", 1, 3,
+				"Mg", "Magnesium", "24.305", 2, 3,
+				"Al", "Aluminium", "26.9815386", 13, 3,
+				"Si", "Silicon", "28.0855", 14, 3,
+				"P", "Phosphorus", "30.973762", 15, 3,
+				"S", "Sulfur", "32.065", 16, 3,
+				"Cl", "Chlorine", "35.453", 17, 3,
+				"Ar", "Argon", "39.948", 18, 3,
+				"K", "Potassium", "39.948", 1, 4,
+				"Ca", "Calcium", "40.078", 2, 4,
+				"Sc", "Scandium", "44.955912", 3, 4,
+				"Ti", "Titanium", "47.867", 4, 4,
+				"V", "Vanadium", "50.9415", 5, 4,
+				"Cr", "Chromium", "51.9961", 6, 4,
+				"Mn", "Manganese", "54.938045", 7, 4,]
+
+
+
+      const objects = [];
+      const targets = { table: [], grid: [] };
+
+
+      for ( let i = 0; i < table.length; i += 5 ) {
+
+        const element = document.createElement( 'div' );
+        element.className = 'element';
+        element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+
+        const number = document.createElement( 'div' );
+        number.className = 'number';
+        number.textContent = ( i / 5 ) + 1;
+        element.appendChild( number );
+
+        const symbol = document.createElement( 'div' );
+        symbol.className = 'symbol';
+        symbol.textContent = table[ i ];
+        element.appendChild( symbol );
+
+        const details = document.createElement( 'div' );
+        details.className = 'details';
+        details.innerHTML = table[ i + 1 ] + '<br>' + table[ i + 2 ];
+        element.appendChild( details );
+
+        const objectCSS = new CSS3DObject( element );
+        objectCSS.position.x = (Math.floor(element.x)*cardWidth) + margin*Math.floor(element.x) - SCREEN_WIDTH/8;
+        objectCSS.position.y = (Math.floor(element.y)*cardHeight) + margin*Math.floor(element.y) - SCREEN_HEIGHT/4;
+        objectCSS.position.z = 1000;
+
+        objects.push( objectCSS );
+
+        const object = new THREE.Object3D();
+        object.position.x = ( table[ i + 3 ] * 140 ) - 1330;
+        object.position.y = - ( table[ i + 4 ] * 180 ) + 990;
+
+        targets.table.push( object );
+      }
+
+
+      // grid
+			for ( let i = 0; i < objects.length; i ++ ) {
+
+					const object = new THREE.Object3D();
+
+					object.position.x = ( ( i % 5 ) * 400 ) - 800;
+					object.position.y = ( - ( Math.floor( i / 5 ) % 5 ) * 400 ) + 800;
+					object.position.z = ( Math.floor( i / 25 ) ) * 1000 - 2000;
+
+					targets.grid.push( object );
+
+				}
+    }
+
+    function drawBoard(event){
+      console.log("adding tiles...")
+      console.dir(event);
+      board = event.board;
+      var sphereMaterial = new THREE.MeshNormalMaterial();
+      var sphereGeometry = new THREE.SphereGeometry(10, 32, 16);
+
+      var cardGeometry =  new THREE.BoxBufferGeometry( cardWidth, cardHeight, 1 );
+      cardGeometry.computeBoundingSphere();
+
+      cards = [...Array(board.width)].map(e => Array(board.height));
+      board.tile_slots.forEach(function(element) {
+        var red = parseInt("550000", 16);
+        var green = parseInt("00FF00", 16);
+        var blue = parseInt("000055", 16);
+        color =  red + blue + (element.x)*(element.y);
+        
+        var cardMaterial = new THREE.MeshBasicMaterial({color: color});
+        var card = new THREE.Mesh(
+          cardGeometry,
+          cardMaterial
+        );
+
+        card.position.z = 1000;
+        card.position.x = (Math.floor(element.x)*cardWidth) + margin*Math.floor(element.x) - SCREEN_WIDTH/8;
+        card.position.y = (Math.floor(element.y)*cardHeight) + margin*Math.floor(element.y) - SCREEN_HEIGHT/4;
+        
+        card.name = element.tile_slot_hash;
+
+        mesh3.add(card);
+        cards[element.x][element.y] = card;
+
+        if(element.tile_hash != null){
+          tile = board.tiles[element.tile_hash];
+          var sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
+          sphere.position.x = 0;
+          sphere.position.y = 0;
+          sphere.position.z = 0;
+          card.add( sphere );
+        }
+      });
+
+      var bannerGeometry =  new THREE.BoxBufferGeometry( 2440, 440, 1 );
+      var texture = new THREE.TextureLoader().load( '/images/BANDSTOCK5.png' );
+      var bannerMaterial = new THREE.MeshBasicMaterial({ map: texture });
+      var banner = new THREE.Mesh(
+          bannerGeometry,
+          bannerMaterial
+        );
+        
+      banner.position.x = Math.floor(cards.length/2)*cardWidth - 100;
+      banner.position.y = -540;
+      banner.position.z = 0;
+      banner.rotation.z = Math.PI;
+
+      mesh3.add(banner);
+
+      
+      cameraPerspective.position.x = Math.floor(cards.length/2)*cardWidth + margin* Math.floor(cards.length/2) - SCREEN_WIDTH/8;;
+      cameraPerspective.position.y = Math.floor(cards[0].length/2)*cardWidth - margin * Math.floor(cards[0].length/2) - SCREEN_HEIGHT/4;;
+      cameraPerspective.position.z = cards.length* (-80);
+
+    }
+
+    function addStarscape(){
+      var geometry = new THREE.BufferGeometry();
+      var vertices = [];
+      for ( var i = 0; i < 10000; i ++ ) {
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // x
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // y
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // z
+      }
+      geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+      var particles = new THREE.Points( geometry, new THREE.PointsMaterial( { color: 0x888888 } ) );
+      scene.add( particles );
+    }
+
+    function addStats(){
+      stats = new Stats();
+      container.appendChild( stats.dom );
+    }
+
+    function onKeyDown ( event ) {
+      switch( event.keyCode ) {
+        case 79: /*O*/
+          activeCamera = cameraOrtho;
+          activeHelper = cameraOrthoHelper;
+          break;
+        case 80: /*P*/
+          activeCamera = cameraPerspective;
+          activeHelper = cameraPerspectiveHelper;
+          break;
+      }
+    }
+
+    function onWindowResize( event ) {
+      SCREEN_WIDTH = window.innerWidth;
+      SCREEN_HEIGHT = window.innerHeight;
+      aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+      renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+      //camera.aspect = aspect;
+      //camera.updateProjectionMatrix();
+
+      cameraPerspective.aspect = aspect;
+      cameraPerspective.updateProjectionMatrix();
+
+      cameraOrtho.left   = - frustumSize * aspect / 2;
+      cameraOrtho.right  =   frustumSize * aspect / 2;
+      cameraOrtho.top    =   frustumSize / 2;
+      cameraOrtho.bottom = - frustumSize / 2;
+      cameraOrtho.updateProjectionMatrix();
+    }
+
+    function render() {
+      // find intersections
+
+       
+
+				raycaster.setFromCamera( mouse, activeCamera );
+
+				var intersects = raycaster.intersectObjects( mesh3.children );
+      //console.log(intersects)
+      //console.log(mouse)
+      if(intersects.length > 0){
+        intersects[0].object.material.color.set(0xff0000)
+        if ( INTERSECTED != intersects[0].index){
+          intersects[0].object.material.color.set(0xff0000)
+          INTERSECTED = intersects[ 0 ].index;
+        }
+        else if (INTERSECTED !== null){
+          intersects[0].object.material.color.set( 0x00ff00 )
+          INTERSECTED = null;
+        }
+      }
+    
+       // if (intersects.length > 0) {
+       //   if ( INTERSECTED != intersects[0].index){
+       //    intersects[0].object.material.color.set( 0xff0000 )
+
+       //    INTERSECTED = intersects[ 0 ].index;
+
+				//	  intersects[0].object.material.color.set( 0xff00aa )
+					
+         // }
+         // else if (INTERSECTED !== null){
+           // intersects[0].object.material.color.set( 0x00ff00 )
+          //  INTERSECTED = null;
+         // }
+       // }
+
+        //console.log(mesh3);
+				//for ( var i = 0; i < intersects.length; i++ ) {
+		      //console.log(intersects[ i ].object.name);
+          //console.log(intersects[ i ].object.material.color);
+
+       //intersects[i].object.material.color.set( 0xff0000 )
+	   //}
+
+
+      //mesh.position.x = Math.abs(700 * Math.cos( r ));
+      //mesh.position.z = 700 * Math.sin( r );
+      //mesh.position.y = 700 * Math.sin( r );
+      //mesh.children[ 0 ].position.x = 70 * Math.cos( 2 * r );
+      //mesh.children[ 0 ].position.z = 70 * Math.sin( r );
+      if ( activeCamera === cameraPerspective ) {
+        //cameraPerspective.fov = 35 + 30 * Math.sin( 0.5 );
+        //cameraPerspective.far = 2000;
+        cameraPerspective.updateProjectionMatrix();
+        cameraPerspectiveHelper.update();
+        cameraPerspectiveHelper.visible = true;
+        cameraOrthoHelper.visible = false;
+      } else {
+        cameraOrtho.far = 2000;
+        cameraOrtho.updateProjectionMatrix();
+        cameraOrthoHelper.update();
+        cameraOrthoHelper.visible = true;
+        cameraPerspectiveHelper.visible = false;
+      }
+      cameraRig.lookAt( mesh3.position );
+      renderer.clear();
+      activeHelper.visible = false;
+      renderer.setViewport( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
+      renderer.render( scene, activeCamera );
+      activeHelper.visible = true;
+      //renderer.setViewport( SCREEN_WIDTH/2, 0, SCREEN_WIDTH/2, SCREEN_HEIGHT );
+      //renderer.render( scene, camera );
+    }
+
+    function swapTiles(event ) {
+      //console.log("swapTiles");
+      //console.log(event.tile1);
+      //console.log(event.tile2);
+
+      var card1 = cards[event.tile1.x][event.tile1.y];
+      var card2 = cards[event.tile2.x][event.tile2.y];
+
+      //var card1Color = card1.material.color;
+
+      //card1.material = new THREE.MeshBasicMaterial( { color: card2.material.color, wireframe: false } );
+      //card2.material = new THREE.MeshBasicMaterial( { color: card1Color, wireframe: false } );
+
+    }
+
+    function moveCameraOut(event){
+      console.log('out')
+      activeCamera.zoom = activeCamera.zoom-.1;
+      activeCamera.updateProjectionMatrix();
+      //if(activeCamera.position.z > -8000)
+      //  activeCamera.position.z = activeCamera.position.z-100;
+    }
+
+    function moveCameraIn(event){
+      activeCamera.zoom = activeCamera.zoom+.1;
+      activeCamera.updateProjectionMatrix();
+      //if(activeCamera.position.z < 800)
+      //  activeCamera.position.z = activeCamera.position.z+100;
+      
+    }
+
+    function moveCameraLeft(event){
+      console.log('move left')
+      
+        activeCamera.position.x = activeCamera.position.x-100;
+      
+    }
+    
+    function moveCameraRight(event){
+      console.log('zoom right')
+      activeCamera.position.x = activeCamera.position.x+100;
+      
+    }
+    
+    function moveCameraUp(event){
+      console.log('zoom up')
+      activeCamera.position.y = activeCamera.position.y-100;
+      
+    }
+    
+    function moveCameraDown(event){
+      console.log('zoom down')
+      activeCamera.position.y = activeCamera.position.y+100;
+      
+    }
+
+    function onMouseMove( event ) {
+
+      event.preventDefault();
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    }
+
+  </script>
