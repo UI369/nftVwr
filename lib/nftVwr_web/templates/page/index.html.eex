@@ -2,11 +2,34 @@
 <script src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
 <script src="<%= Routes.static_path(@conn, "/js/three.min.js") %>"></script>
 <script src="<%= Routes.static_path(@conn, "/js/tween.min.js") %>"></script>
+
 <script src="<%= Routes.static_path(@conn, "/js/TrackballControls.js") %>"></script>
 <script src="<%= Routes.static_path(@conn, "/js/CSS3DRenderer.js") %>"></script>
 <script src="<%= Routes.static_path(@conn, "/js/dat.gui.min.js") %>"></script>
+<script type="module">window.addEventListener( 'initGame', console.log("initGame!"), false);</script>
 
 <script>
+	
+	window.addEventListener( 'initGame', init, false);
+
+		function init(event) {
+			console.log("INIT")
+			initScene();
+			addCameras();
+			addMeshes();
+			addLight();
+      addRenderer();
+      addControlsGui();
+
+      addEventListeners();
+			//addStarscape();
+			initChannel();
+			//addStats();
+			
+			animate();
+		}
+
+
     var SCREEN_WIDTH = window.innerWidth;
     var SCREEN_HEIGHT = window.innerHeight;
     var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
@@ -40,38 +63,252 @@
                       9,8,7,6,5,3,5,6,7,8,9];
     var colors = [0x8f10d5, 0x051ce6, 0x1cb4e5, 0x00d884, 0x00a302, 0xe5e600, 0xfe8227, 0xff0905, 0xd300cd ];
 
-    window.addEventListener( 'initGame', init, false);
-    window.addEventListener( 'drawBoard', drawBoard, false);
+    
+    console.log("in the module");  
     //init();
 
+    function drawGridBoard( event ) {
+				event.preventDefault();
+				console.log("drawing board");
+				scene = new THREE.Scene();
+				var tiles = event.board.tiles;
 
-    function init(event) {
-      console.log("INIT")
-      initContainer();
-      initScene();
-      addEventListeners();
-      addCameras();
-      addMeshes();
-      addLight();
-      //addStarscape();
-      addRenderer();
-      initChannel();
-      //addStats();
-      addControlsGui();
+				//create the invisible 10x10 targets
+				for (var i = 0; i < 10; i++){
+					for (var j = 0; j < 10; j++){
+						var element = document.createElement( 'div' );
+						element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)'
+						//element.style.background = "none";
+						//element.classList.add("silverFrame");
+						var w = 300;
+						var h = (w/3)*4;
+						element.style.width = w + "px";
+						element.style.height = h + "px";
 
-      animate();
+						var object = new THREE.CSS3DObject( element );
+
+						object.position.x = (j-5)*(w*1.1);
+						object.position.y = -(i-5)*(h*1.1);
+						object.position.z = -7000;
+						scene.add( object );
+						targets.table.push( object );
+					}
+				}
+
+				// create the actual tiles
+				for ( var i = 0; i < tiles.length; i++ ) {
+
+					//create the div element
+					var element = document.createElement( 'div' );
+					element.classList.add(tiles[i].hash);
+					element.classList.add("element");
+					//element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)';
+					var w = 300;
+					var h = (w/3)*4; // give tiles a 3x4 ratio proportional to screen size
+					element.style.width = w + "px";
+					element.style.height = h + "px";
+
+					//put the image inside of it
+					var details = document.createElement( 'img' );
+					details.className = 'details';
+					details.style.width = "100%";
+					details.style.height = "100%";
+					details.src = "http://localhost:4000" + tiles[i].image_thumb;
+					details.zIndex = 1;
+					details.position = "static"
+					element.appendChild( details );
+
+					//add a info pannel to the bottom of each frame
+					/*var artInfo = document.createElement('div');
+					artInfo.classList.add("artInfoPanel");
+					artInfo.style.width = "98%";
+					artInfo.style.height= "14%";
+					artInfo.style.margin= "auto";
+					element.appendChild(artInfo);*/
+
+					//create a 3d object somewhere in space for the div to go in
+					var object = new THREE.CSS3DObject( element );
+					object.position.x = tiles[i].x * 1000 - 3000;
+					object.position.y = tiles[i].y * 1000 + 22000;
+					object.position.z = tiles[i].z + 100000;
+					object.tile = tiles[i];
+
+					//push the object onto the scene, and into the objects array.
+					//Tiles will travel to spots in Targets array on load
+					scene.add( object );
+					objects.push( object );
+					element.object = object;
+
+					//Set up a click handler for each one that zoomes in closer.
+					(function (_element) { //turn click events on elements into cameraZoom events
+						_element.addEventListener( 'click', function ( event ) {
+							var event = new Event("cameraZoom");
+							event.destination = new THREE.Vector3( _element.object.position.x, _element.object.position.y, _element.object.position.z+2000);
+							window.dispatchEvent(event);
+							//transform( targets.grid, 2000 );
+						}, false );
+        	})(element);
+				}
+
+				//Add the blank frames
+				for ( var i = tiles.length; i < 100; i++ ) {
+					var element = document.createElement( 'div' );
+					element.classList.add("silverFrame");
+					//element.classList.add("element");
+					//element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)';
+
+					var w = 300;
+					var h = (w/3)*4; // give tiles a 3x4 ratio proportional to screen size
+					element.style.width = w + "px";
+					element.style.height = h + "px";
+
+					var object = new THREE.CSS3DObject( element );
+					//object.position.x = tiles[i].x * 1000 - 3000;
+					//object.position.y = tiles[i].y * 1000 + 22000;
+					//object.position.z = tiles[i].z + 100000;
+
+					object.element = element;
+					scene.add( object );
+					objects.push( object );
+
+
+				}
+
+				// sphere
+				var vector = new THREE.Vector3();
+				for ( var i = 0, l = objects.length; i < l; i ++ ) {
+					var phi = Math.acos( -1 + ( 2 * i ) / l );
+					var theta = Math.sqrt( l * Math.PI ) * phi;
+					var object = new THREE.Object3D();
+					object.position.setFromSphericalCoords( 1500, phi, theta );
+					object.position.x = object.position.x + (window.innerWidth/2);
+
+					vector.copy( object.position ).multiplyScalar( 2 );
+					object.lookAt( vector );
+					targets.sphere.push( object );
+				}
+
+				renderer = new THREE.CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
+				animate();
+
+				var button = document.getElementById( 'bid' );
+				button.addEventListener( 'click', function ( event ) {
+					window.dispatchEvent(new Event("bidPressed"));
+					//
+				}, false );
+
+				var button = document.getElementById( 'table' );
+				button.addEventListener( 'click', function ( event ) {
+					transform(targets.table, 500);
+					zoomTo(new THREE.Vector3(cameraStart.x, cameraStart.y, cameraStart.z));
+					//
+				}, false );
+				var button = document.getElementById( 'sphere' );
+
+				if(button){button.addEventListener( 'click', function ( event ) {
+					transform( targets.sphere, 2000 );
+					zoomHome();
+				}, false );}
+
+				var button = document.getElementById( 'helix' );
+
+				if(button){button.addEventListener( 'click', function ( event ) {
+					transform( targets.helix, 2000 );
+				}, false );}
+
+				if(button){var button = document.getElementById( 'grid' );
+				button.addEventListener( 'click', function ( event ) {
+				var event = new Event("cameraZoom");
+		      	event.destination = {x:1, y:1, z:1+500}
+		      	window.dispatchEvent(event);
+					//transform( targets.grid, 2000 );
+				}, false );}
+
+				transform( targets.table, 900 );
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+			
+			}
+
+    
+    function drawBoard(event){
+
+      
+      console.log("adding tiles...")
+      console.dir(event);
+      board = event.board;
+      var sphereMaterial = new THREE.MeshNormalMaterial();
+      var sphereGeometry = new THREE.SphereGeometry(10, 32, 16);
+
+      var cardGeometry =  new THREE.BoxBufferGeometry( cardWidth, cardHeight, 1 );
+      cardGeometry.computeBoundingSphere();
+
+      cards = [...Array(board.width)].map(e => Array(board.height));
+      board.tile_slots.forEach(function(element) {
+        var red = parseInt("550000", 16);
+        var green = parseInt("00FF00", 16);
+        var blue = parseInt("000055", 16);
+        color =  red + blue + (element.x)*(element.y);
+        
+        var cardMaterial = new THREE.MeshBasicMaterial({color: color});
+        var card = new THREE.Mesh(
+          cardGeometry,
+          cardMaterial
+        );
+
+        card.position.z = 1000;
+        card.position.x = (Math.floor(element.x)*cardWidth) + margin*Math.floor(element.x) - SCREEN_WIDTH/8;
+        card.position.y = (Math.floor(element.y)*cardHeight) + margin*Math.floor(element.y) - SCREEN_HEIGHT/4;
+        
+        card.name = element.tile_slot_hash;
+
+        mesh3.add(card);
+        cards[element.x][element.y] = card;
+
+        if(element.tile_hash != null){
+          tile = board.tiles[element.tile_hash];
+          var sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
+          sphere.position.x = 0;
+          sphere.position.y = 0;
+          sphere.position.z = 0;
+          card.add( sphere );
+        }
+      });
+
+      var bannerGeometry =  new THREE.BoxBufferGeometry( 2440, 440, 1 );
+      var texture = new THREE.TextureLoader().load( '/images/BANDSTOCK5.png' );
+      var bannerMaterial = new THREE.MeshBasicMaterial({ map: texture });
+      var banner = new THREE.Mesh(
+          bannerGeometry,
+          bannerMaterial
+        );
+        
+      banner.position.x = Math.floor(cards.length/2)*cardWidth - 100;
+      banner.position.y = -540;
+      banner.position.z = 0;
+      banner.rotation.z = Math.PI;
+
+      mesh3.add(banner);
+
+      
+      cameraPerspective.position.x = Math.floor(cards.length/2)*cardWidth + margin* Math.floor(cards.length/2) - SCREEN_WIDTH/8;;
+      cameraPerspective.position.y = Math.floor(cards[0].length/2)*cardWidth - margin * Math.floor(cards[0].length/2) - SCREEN_HEIGHT/4;;
+      cameraPerspective.position.z = cards.length* (-80);
+
     }
 
-    function initContainer(){
-      container = document.createElement( 'div' );
-      document.body.appendChild( container );
-    }
 
     function initScene(){
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
         scene = new THREE.Scene();
     }
 
     function addEventListeners(){
+      window.addEventListener( 'drawBoard', drawBoard, false);
+      //window.addEventListener( 'drawBoard', drawGridBoard, false);
       window.addEventListener( 'swapTiles', swapTiles, false);
       window.addEventListener( 'resize', onWindowResize, false );
       document.addEventListener( 'keydown', onKeyDown, false );
@@ -197,155 +434,6 @@
       requestAnimationFrame( animate );
       render();
       //stats.update();
-    }
-
-    function drawBoard2(event) {
-
-      var table = [
-				"H", "Hydrogen", "1.00794", 1, 1,
-				"He", "Helium", "4.002602", 18, 1,
-				"Li", "Lithium", "6.941", 1, 2,
-				"Be", "Beryllium", "9.012182", 2, 2,
-				"B", "Boron", "10.811", 13, 2,
-				"C", "Carbon", "12.0107", 14, 2,
-				"N", "Nitrogen", "14.0067", 15, 2,
-				"O", "Oxygen", "15.9994", 16, 2,
-				"F", "Fluorine", "18.9984032", 17, 2,
-				"Ne", "Neon", "20.1797", 18, 2,
-				"Na", "Sodium", "22.98976...", 1, 3,
-				"Mg", "Magnesium", "24.305", 2, 3,
-				"Al", "Aluminium", "26.9815386", 13, 3,
-				"Si", "Silicon", "28.0855", 14, 3,
-				"P", "Phosphorus", "30.973762", 15, 3,
-				"S", "Sulfur", "32.065", 16, 3,
-				"Cl", "Chlorine", "35.453", 17, 3,
-				"Ar", "Argon", "39.948", 18, 3,
-				"K", "Potassium", "39.948", 1, 4,
-				"Ca", "Calcium", "40.078", 2, 4,
-				"Sc", "Scandium", "44.955912", 3, 4,
-				"Ti", "Titanium", "47.867", 4, 4,
-				"V", "Vanadium", "50.9415", 5, 4,
-				"Cr", "Chromium", "51.9961", 6, 4,
-				"Mn", "Manganese", "54.938045", 7, 4,]
-
-
-
-      const objects = [];
-      const targets = { table: [], grid: [] };
-
-
-      for ( let i = 0; i < table.length; i += 5 ) {
-
-        const element = document.createElement( 'div' );
-        element.className = 'element';
-        element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
-
-        const number = document.createElement( 'div' );
-        number.className = 'number';
-        number.textContent = ( i / 5 ) + 1;
-        element.appendChild( number );
-
-        const symbol = document.createElement( 'div' );
-        symbol.className = 'symbol';
-        symbol.textContent = table[ i ];
-        element.appendChild( symbol );
-
-        const details = document.createElement( 'div' );
-        details.className = 'details';
-        details.innerHTML = table[ i + 1 ] + '<br>' + table[ i + 2 ];
-        element.appendChild( details );
-
-        const objectCSS = new CSS3DObject( element );
-        objectCSS.position.x = (Math.floor(element.x)*cardWidth) + margin*Math.floor(element.x) - SCREEN_WIDTH/8;
-        objectCSS.position.y = (Math.floor(element.y)*cardHeight) + margin*Math.floor(element.y) - SCREEN_HEIGHT/4;
-        objectCSS.position.z = 1000;
-
-        objects.push( objectCSS );
-
-        const object = new THREE.Object3D();
-        object.position.x = ( table[ i + 3 ] * 140 ) - 1330;
-        object.position.y = - ( table[ i + 4 ] * 180 ) + 990;
-
-        targets.table.push( object );
-      }
-
-
-      // grid
-			for ( let i = 0; i < objects.length; i ++ ) {
-
-					const object = new THREE.Object3D();
-
-					object.position.x = ( ( i % 5 ) * 400 ) - 800;
-					object.position.y = ( - ( Math.floor( i / 5 ) % 5 ) * 400 ) + 800;
-					object.position.z = ( Math.floor( i / 25 ) ) * 1000 - 2000;
-
-					targets.grid.push( object );
-
-				}
-    }
-
-    function drawBoard(event){
-      console.log("adding tiles...")
-      console.dir(event);
-      board = event.board;
-      var sphereMaterial = new THREE.MeshNormalMaterial();
-      var sphereGeometry = new THREE.SphereGeometry(10, 32, 16);
-
-      var cardGeometry =  new THREE.BoxBufferGeometry( cardWidth, cardHeight, 1 );
-      cardGeometry.computeBoundingSphere();
-
-      cards = [...Array(board.width)].map(e => Array(board.height));
-      board.tile_slots.forEach(function(element) {
-        var red = parseInt("550000", 16);
-        var green = parseInt("00FF00", 16);
-        var blue = parseInt("000055", 16);
-        color =  red + blue + (element.x)*(element.y);
-        
-        var cardMaterial = new THREE.MeshBasicMaterial({color: color});
-        var card = new THREE.Mesh(
-          cardGeometry,
-          cardMaterial
-        );
-
-        card.position.z = 1000;
-        card.position.x = (Math.floor(element.x)*cardWidth) + margin*Math.floor(element.x) - SCREEN_WIDTH/8;
-        card.position.y = (Math.floor(element.y)*cardHeight) + margin*Math.floor(element.y) - SCREEN_HEIGHT/4;
-        
-        card.name = element.tile_slot_hash;
-
-        mesh3.add(card);
-        cards[element.x][element.y] = card;
-
-        if(element.tile_hash != null){
-          tile = board.tiles[element.tile_hash];
-          var sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
-          sphere.position.x = 0;
-          sphere.position.y = 0;
-          sphere.position.z = 0;
-          card.add( sphere );
-        }
-      });
-
-      var bannerGeometry =  new THREE.BoxBufferGeometry( 2440, 440, 1 );
-      var texture = new THREE.TextureLoader().load( '/images/BANDSTOCK5.png' );
-      var bannerMaterial = new THREE.MeshBasicMaterial({ map: texture });
-      var banner = new THREE.Mesh(
-          bannerGeometry,
-          bannerMaterial
-        );
-        
-      banner.position.x = Math.floor(cards.length/2)*cardWidth - 100;
-      banner.position.y = -540;
-      banner.position.z = 0;
-      banner.rotation.z = Math.PI;
-
-      mesh3.add(banner);
-
-      
-      cameraPerspective.position.x = Math.floor(cards.length/2)*cardWidth + margin* Math.floor(cards.length/2) - SCREEN_WIDTH/8;;
-      cameraPerspective.position.y = Math.floor(cards[0].length/2)*cardWidth - margin * Math.floor(cards[0].length/2) - SCREEN_HEIGHT/4;;
-      cameraPerspective.position.z = cards.length* (-80);
-
     }
 
     function addStarscape(){

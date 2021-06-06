@@ -78,6 +78,9 @@ channel.join()
       .receive("error", resp => { console.log("Unable to join " + event.channelID, resp) });
   });
 
+  
+
+
   if(!game_loaded){
     console.log("firing initGame");
     var event = new Event("initGame");

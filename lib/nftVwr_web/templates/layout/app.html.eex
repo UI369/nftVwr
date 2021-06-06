@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
     <script defer type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <script src="https://unpkg.com/@metamask/detect-provider/dist/detect-provider.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/css/materialize.min.css">
+		<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
     <script type="module">
     
       // This function detects most providers injected at window.ethereum
@@ -18,12 +21,12 @@
         // provider === window.ethereum
         
 
-        const ethereumButton = document.querySelector('.enableEthereumButton');
-        const showAccount = document.querySelector('.showAccount');
+        //const ethereumButton = document.querySelector('.enableEthereumButton');
+        //const showAccount = document.querySelector('.showAccount');
 
-        ethereumButton.addEventListener('click', () => {
-          getAccount();
-        });
+        //ethereumButton.addEventListener('click', () => {
+          //getAccount();
+        //});
 
         async function getAccount() {
           const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
@@ -42,46 +45,86 @@
         margin: 0px;
         overflow: hidden;
       }
-      #info {
-        position: absolute;
-        top: 0px; width: 100%;
-        padding: 5px;
-        z-index: 100;
-      }
+
       a {
-        color: #0080ff;
-      }
-      b { color: lightgreen }
+				color: #8ff;
+			}
 
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+			#menu {
+				position: absolute;
+				bottom: 20px;
+				width: 100%;
+				text-align: center;
+			}
 
-      body{
-        background: #000;
-      }
+			.element {
+				width: 120px;
+				height: 160px;
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.5);
+				border: 1px solid rgba(127,255,255,0.25);
+				font-family: Helvetica, sans-serif;
+				text-align: center;
+				line-height: normal;
+				cursor: default;
+			}
 
-      #info{
+			.element:hover {
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.75);
+				border: 1px solid rgba(127,255,255,0.75);
+			}
+
+      .element .number {
         position: absolute;
-        color: rgba(255, 255, 255, 0.46);
-        width: 100%;
-        text-align: center;
-        z-index: 1;
-        font-family: sans-serif;
-        font-size: 23px;
-        font-weight: 700;
-        bottom: 2vh;
+        top: 20px;
+        right: 20px;
+        font-size: 12px;
+        color: rgba(127,255,255,0.75);
+      }
+
+      .element .symbol {
+        position: absolute;
+        top: 40px;
+        left: 0px;
+        right: 0px;
+        font-size: 60px;
+        font-weight: bold;
+        color: rgba(255,255,255,0.75);
+        text-shadow: 0 0 10px rgba(0,255,255,0.95);
+      }
+
+      .element .details {
+        position: absolute;
+        bottom: 15px;
+        left: 0px;
+        right: 0px;
+        font-size: 12px;
+        color: rgba(127,255,255,0.75);
+      }
+
+      button {
+        color: rgba(127,255,255,0.75);
+        background: transparent;
+        outline: 1px solid rgba(127,255,255,0.75);
+        border: 0px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: rgba(0,255,255,0.5);
+      }
+
+      button:active {
+        color: #000000;
+        background-color: rgba(0,255,255,0.75);
       }
     </style>
   </head>
   <body>
-    <header>
+    <!--<header>
       <section class="container">
         <nav role="navigation">
-
-            <span><button class="enableEthereumButton">Enable Ethereum</button></span>
+            <span><button id="ethereumButton" class="enableEthereumButton">Enable Ethereum</button></span>
             <h2>Your Account: <span class="showAccount"></span></h2>
             <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
               <span><%= link "How?", to: Routes.live_dashboard_path(@conn, :home) %></span>
@@ -92,11 +135,12 @@
           <img src="<%= Routes.static_path(@conn, "/images/nftvwrLogo.png") %>" alt="Phoenix Framework Logo"/>
         </a>
       </section>
-    </header>
+    </header>-->
+    
     <main role="main" class="container">
       <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
       <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
       <%= @inner_content %>
-    </main>
+    </main> 
   </body>
 </html>
