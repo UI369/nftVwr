@@ -90,6 +90,8 @@
         font-size: 48px;
       }
 
+      
+
 			.element {
 				width: 128px;
 				height: 192px;
@@ -133,7 +135,23 @@
         color: rgba(127,255,255,0.75);
       }
 
-      button {
+      .actionButton {
+				width: 288px;
+				height: 192px;
+				font-family: Helvetica, sans-serif;
+        background: transparent;
+        font-size: 26px;
+				text-align: center;
+				line-height: normal;
+				cursor: default;
+			}
+
+      .actionbutton:hover {
+        cursor: pointer;
+        background: rgba(0,255,255,0.5);
+      }
+
+      .outerButton {
         color: rgba(127,255,255,0.75);
         background: transparent;
         outline: 1px solid rgba(127,255,255,0.75);
@@ -142,11 +160,11 @@
         cursor: pointer;
       }
 
-      button:hover {
+      .outerButton:hover {
         background-color: rgba(0,255,255,0.5);
       }
 
-      button:active {
+      .outerButton:active {
         color: #000000;
         background-color: rgba(0,255,255,0.75);
       }

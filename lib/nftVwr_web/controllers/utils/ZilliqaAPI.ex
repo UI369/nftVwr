@@ -5,6 +5,8 @@ defmodule NftVwrWeb.ZilliqaAPI do
     minters owned_token_count token_id_count token_owners token_uris total_supply
   )
 
+  
+
   def process_request_url(url) do
     "https://api.zilliqa.com/" <> url
   end
@@ -19,8 +21,6 @@ defmodule NftVwrWeb.ZilliqaAPI do
 
   def process_response_body(body) do
     body
-    |> Poison.decode!
     |> Map.take(@expected_fields)
-    |> Enum.map(fn({k, v}) -> {String.to_atom(k), v} end)
   end
 end

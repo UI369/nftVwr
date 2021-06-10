@@ -27,7 +27,13 @@ defmodule NftVwrWeb.GameChannel do
 
   def handle_in("load_nfts", _payload, socket) do
     contractState = ZilliqaAPI.getContractState();
-    {:ok, response} = Jason.decode(contractState.body);
+    {:ok, body} = Jason.decode(contractState.body);
+
+
+
+    response = body
+    |> Map.get("result")
+    |> Map.take(["owned_token_count", "token_id_count", "token_owners", "token_uris", "total_supply"])
     IO.inspect(response);
     {:noreply, socket}
   end

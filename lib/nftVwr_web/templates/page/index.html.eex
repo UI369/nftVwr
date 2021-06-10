@@ -237,39 +237,61 @@
 			}
 
 			function createProfileOverlay() {
+
+				var color = 'rgba(127,0,127,.25)';
+
+				//create outer overlay w/border
 				const overlay = document.createElement( 'div' );
 				overlay.className = 'overlay';
 				overlay.ID = 'profile_overlay';
 				
+				//Create thh wallet ID
 				const walletID = document.createElement( 'div' );
 				walletID.id = "profile_overlay_wallet_id";
 				walletID.className = 'wallet_id';
 				walletID.textContent = "event.walletID.bech32";
 				overlay.appendChild( walletID );
 
+				//Add both to a CSS Object
 				var objectCSS = new CSS3DObject( overlay );
 				objectCSS.name = "profileOverlay_outline";
 				objectCSS.position.x = 0;
 				objectCSS.position.y = 200;
 				objectCSS.position.z = 250;
 
+
+				const loadNFTsButton = document.createElement('button');
+				loadNFTsButton.id = 'loadNFTsButton';
+				loadNFTsButton.className = 'actionButton';
+				loadNFTsButton.textContent = "Display My NFTs";
+				loadNFTsButton.style.border = '5px solid ' + color;
+
+				var nftButton = new CSS3DObject( loadNFTsButton );
+				nftButton.position.x = 0;
+				nftButton.position.y = 0;
+				nftButton.position.z = 250;
+
+
+				//create inner 9 tile slots
 				var tileSlots = [];
 				for(var i = 0; i < 9; i++){
-					tileSlots.push({hash:"overlayboard_11", x: Math.floor(i/3), y: i%3});
+					tileSlots.push({hash:"overlayboard_" + (i/3) + (i%3), x: Math.floor(i/3), y: i%3});
 				}
 				
-				var profileTileSlots = createGridOfTileSlots(tileSlots, objectCSS.position.x-600, objectCSS.position.y+200, objectCSS.position.z+50, 'rgba(127,0,127,.25)');				
+				var profileTileSlots = createGridOfTileSlots(tileSlots, objectCSS.position.x-600, objectCSS.position.y+200, objectCSS.position.z+50, color);				
 
 				var group = new THREE.Group();
 				group.name = "profileOverlay";
 
 				group.add(objectCSS)
+				group.add(nftButton);
 				profileTileSlots.forEach((tileSlot) => {
 					tileSlot.visible=false;
 					group.add(tileSlot)});
 
 				group.visible = false;
 				objectCSS.visible = false;
+				nftButton.visible = false;
 				
 				overlay.addEventListener( 'click', function () {
 					console.log("click event on overlay" + walletID.textContent)
@@ -333,7 +355,7 @@
 				hideProfileOverlay();
 			}
 
-			function loadNFTs(event) {
+			function loadNFTs() {
 				var event = new Event("loadMyNFTs");
 				event.contract_address = "cont_addr_tempABCDEF";
 				//Dispatch a "zilPayConnected" event with walletID as a property. 
@@ -372,7 +394,7 @@
 			<button id="sphere">SPHERE</button>
 			<button id="helix">HELIX</button>
 			<button id="grid">GRID</button -->
-			<button id="zilpayButton">ZilPay</button>
-			<button id="resetButton">Reset</button>
-			<button id="loadNFTsButton">Load NFTs</button>
+			<button id="zilpayButton" class="outerButton">ZilPay</button>
+			<button id="resetButton" class="outerButton">Reset</button>
+			<button id="loadNFTsButton" class="outerButton">Load NFTs</button>
 		</div>
