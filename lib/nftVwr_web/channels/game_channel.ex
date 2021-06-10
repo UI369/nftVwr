@@ -3,12 +3,15 @@ defmodule NftVwrWeb.GameChannel do
   #alias Bstk.{BoardServer, BoardSupervisor}
   #alias BstkInterfaceWeb.BoardView
   alias NftVwr.Presence
+  alias NftVwrWeb.ZilliqaAPI
 
   def channel do
     quote do
       import NftVwr.Gettext
     end
   end
+
+  #HTTPoison.post "https://api.zilliqa.com/", "{\"id\": \"1\", \"jsonrpc\": \"2.0\", \"method\": \"GetSmartContractState\", \"params\": [\"zil1fkesj7705lstmyk4h9psj5n8qw4034c5a2r2an\"]}", [{"Content-Type", "application/json"}]
 
   def join("game:lobby", _payload, socket) do
     IO.puts("joining... " <> "game:lobby");
@@ -20,6 +23,13 @@ defmodule NftVwrWeb.GameChannel do
 
 
     {:ok, reply, assign(socket, :user_id, "my_user1")}
+  end
+
+  def handle_in("load_nfts", _payload, socket) do
+    contractState = ZilliqaAPI.getContractState();
+    {:ok, response} = Jason.decode(contractState.body);
+    IO.inspect(response);
+    {:noreply, socket}
   end
 
   def join("board:" <> board_id, _payload, socket) do
@@ -39,13 +49,24 @@ defmodule NftVwrWeb.GameChannel do
       hash: "boardCreator",
       height: 5,
       width: 5,
-      tile_slots: [%{x: 4,
-      y: 4,
-      tile_hash: "43",
-      tile_slot_hash: "43"}],
-      tiles: [],
-      }
-
+      tile_slots: [
+        %{hash: "boardName_11", x: 1, y: 1},
+        %{hash: "boardName_12", x: 1, y: 2},
+        %{hash: "boardName_13", x: 1, y: 3},
+        %{hash: "boardName_21", x: 2, y: 1},
+        %{hash: "boardName_22", x: 2, y: 2},
+        %{hash: "boardName_23", x: 2, y: 3},
+        %{hash: "boardName_31", x: 3, y: 1},
+        %{hash: "boardName_32", x: 3, y: 2},
+        %{hash: "boardName_33", x: 3, y: 3},
+      ],
+      tiles: [
+        %{tile_ID: "1", tile_label: "My NFT1", tile_hash: "zil03553...", x: 1, y: 1, boardHash: "boardCreator"},
+        %{tile_ID: "2", tile_label: "My NFT2", tile_hash: "zil03554...", x: 1, y: 2, boardHash: "boardCreator"},
+        %{tile_ID: "3", tile_label: "My NFT3", tile_hash: "zil03553...", x: 1, y: 3, boardHash: "boardCreator"},
+        %{tile_ID: "5", tile_label: "My NFT4", tile_hash: "zil03554...", x: 2, y: 1, boardHash: "boardCreator"}
+      ]
+    }
       #tile_slot: %{x: 4,
       # y: 4,
       # tile_hash: "43",

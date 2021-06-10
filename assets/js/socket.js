@@ -57,30 +57,33 @@ let game_loaded = false;
 
 
 // Now that you are connected, you can join channels with a topic:
-let channel = socket.channel("game:lobby", {})
+let gameLobby = socket.channel("game:lobby", {})
 
-channel.join()
+gameLobby.join()
   .receive("ok", resp => { console.log("Joined successfully", resp) })
   .receive("error", resp => { console.log("Unable to join", resp) })
 
   document.addEventListener( 'doJoinChannel', function(event) {
     console.log("doJoinChannel event received.  Joining " + event.channel + ":" + event.channel_id)
-    let channel = socket.channel(event.channel + ":" + event.channel_id, {}); //TODOMFD: THis is a hard coded Database ID on the back end, needs changed!
-    channel.join()
+    let eventChannel = socket.channel(event.channel + ":" + event.channel_id, {}); //TODOMFD: THis is a hard coded Database ID on the back end, needs changed!
+    eventChannel.join()
       .receive("ok", resp => {
         var event = new Event("drawBoard");
         console.log("Server response:");
         console.dir(resp);
         event.board = resp.board;
-        
         window.dispatchEvent(event);
       })
       .receive("error", resp => { console.log("Unable to join " + event.channelID, resp) });
   });
 
+  console.log('loadnft event?');
+  document.addEventListener( 'loadMyNFTs', function(event){
+    console.log("loadMyNFTs event received. Firing load_nfts");
+    gameLobby.push('load_nfts', {body: "testValue"});
+  })
+
   
-
-
   if(!game_loaded){
     console.log("firing initGame");
     var event = new Event("initGame");

@@ -1,0 +1,625 @@
+
+
+<script type="module">window.addEventListener( 'initGame', console.log("initGame!"), false);</script>
+
+<script type="module">
+console.log("in the module");  
+
+  //import {dat} from "<%= Routes.static_path(@conn, "/js/dat.gui.min.js") %>";
+  import * as THREE from "<%= Routes.static_path(@conn, "/js/three.module.js") %>";
+  import { TWEEN } from "<%= Routes.static_path(@conn, "/js/tween.module.min.js") %>";		
+  import { TrackballControls } from "<%= Routes.static_path(@conn, "/js/TrackballControls.js") %>";
+	import { CSS3DRenderer, CSS3DObject } from "<%= Routes.static_path(@conn, "/js/CSS3DRenderer.js") %>";
+
+	//import {TileEngine} from "Routes.static_path(@conn, "/js/tile_engine.module.js")%>;
+	
+	  //window.addEventListener( 'initGame', init, false);
+    init();
+
+		function init(event) {
+			console.log("INIT")
+			initScene();
+			addCameras();
+			addMeshes();
+			addLight();
+      addRenderer();
+      addControlsGui();
+
+      addEventListeners();
+			//addStarscape();
+			initChannel();
+			//addStats();
+			
+			animate();
+		}
+
+    
+
+
+    var SCREEN_WIDTH = window.innerWidth;
+    var SCREEN_HEIGHT = window.innerHeight;
+    var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+    var container, stats;
+    var camera, scene, renderer, mesh, mesh3;
+    var cameraRig, activeCamera, activeHelper;
+    var cameraPerspective, cameraOrtho;
+    var cameraPerspectiveHelper, cameraOrthoHelper;
+    var controls;
+    var frustumSize = 600;
+    var board;
+    var stats;
+    var cards;      
+    var card1;
+    var card2;
+    var margin=3;
+    var cardWidth = 30;
+    var cardHeight = 40;
+    var raycaster = new THREE.Raycaster();
+    var mouse = new THREE.Vector2(), INTERSECTED;
+
+    var vortexGrid = [9,8,7,6,5,3,5,6,7,8,9,
+                      8,7,6,5,4,4,4,5,6,7,8,
+                      7,6,3,4,3,2,3,4,3,6,7,
+                      6,5,4,5,2,1,2,5,4,5,6,
+                      5,4,3,2,1,9,1,2,3,4,5,
+                      3,4,2,1,9,8,9,1,2,4,3,
+                      5,4,3,2,1,9,1,2,3,4,5,
+                      6,5,4,5,2,1,2,5,4,5,6,
+                      7,6,3,4,3,2,3,4,3,6,7,
+                      8,7,6,5,4,4,4,5,6,7,8,
+                      9,8,7,6,5,3,5,6,7,8,9];
+    var colors = [0x8f10d5, 0x051ce6, 0x1cb4e5, 0x00d884, 0x00a302, 0xe5e600, 0xfe8227, 0xff0905, 0xd300cd ];
+
+    //init();
+
+    function drawGridBoard( event ) {
+				event.preventDefault();
+				console.log("drawing board");
+				scene = new THREE.Scene();
+				var tiles = event.board.tiles;
+
+				//create the invisible 10x10 targets
+				for (var i = 0; i < 10; i++){
+					for (var j = 0; j < 10; j++){
+						var element = document.createElement( 'div' );
+						element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)'
+						//element.style.background = "none";
+						//element.classList.add("silverFrame");
+						var w = 300;
+						var h = (w/3)*4;
+						element.style.width = w + "px";
+						element.style.height = h + "px";
+
+						var object = new CSS3DObject( element );
+
+						object.position.x = (j-5)*(w*1.1);
+						object.position.y = -(i-5)*(h*1.1);
+						object.position.z = -7000;
+						scene.add( object );
+						targets.table.push( object );
+					}
+				}
+
+				// create the actual tiles
+				for ( var i = 0; i < tiles.length; i++ ) {
+
+					//create the div element
+					var element = document.createElement( 'div' );
+					element.classList.add(tiles[i].hash);
+					element.classList.add("element");
+					//element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)';
+					var w = 300;
+					var h = (w/3)*4; // give tiles a 3x4 ratio proportional to screen size
+					element.style.width = w + "px";
+					element.style.height = h + "px";
+
+					//put the image inside of it
+					var details = document.createElement( 'img' );
+					details.className = 'details';
+					details.style.width = "100%";
+					details.style.height = "100%";
+					details.src = "http://localhost:4000" + tiles[i].image_thumb;
+					details.zIndex = 1;
+					details.position = "static"
+					element.appendChild( details );
+
+					//add a info pannel to the bottom of each frame
+					/*var artInfo = document.createElement('div');
+					artInfo.classList.add("artInfoPanel");
+					artInfo.style.width = "98%";
+					artInfo.style.height= "14%";
+					artInfo.style.margin= "auto";
+					element.appendChild(artInfo);*/
+
+					//create a 3d object somewhere in space for the div to go in
+					var object = new CSS3DObject( element );
+					object.position.x = tiles[i].x * 1000 - 3000;
+					object.position.y = tiles[i].y * 1000 + 22000;
+					object.position.z = tiles[i].z + 100000;
+					object.tile = tiles[i];
+
+					//push the object onto the scene, and into the objects array.
+					//Tiles will travel to spots in Targets array on load
+					scene.add( object );
+					objects.push( object );
+					element.object = object;
+
+					//Set up a click handler for each one that zoomes in closer.
+					(function (_element) { //turn click events on elements into cameraZoom events
+						_element.addEventListener( 'click', function ( event ) {
+							var event = new Event("cameraZoom");
+							event.destination = new THREE.Vector3( _element.object.position.x, _element.object.position.y, _element.object.position.z+2000);
+							window.dispatchEvent(event);
+							//transform( targets.grid, 2000 );
+						}, false );
+        	})(element);
+				}
+
+				//Add the blank frames
+				for ( var i = tiles.length; i < 100; i++ ) {
+					var element = document.createElement( 'div' );
+					element.classList.add("silverFrame");
+					//element.classList.add("element");
+					//element.style.borderColor = 'rgba('+ i*2 + ',127,127,1)';
+
+					var w = 300;
+					var h = (w/3)*4; // give tiles a 3x4 ratio proportional to screen size
+					element.style.width = w + "px";
+					element.style.height = h + "px";
+
+					var object = new CSS3DObject( element );
+					//object.position.x = tiles[i].x * 1000 - 3000;
+					//object.position.y = tiles[i].y * 1000 + 22000;
+					//object.position.z = tiles[i].z + 100000;
+
+					object.element = element;
+					scene.add( object );
+					objects.push( object );
+
+
+				}
+
+				// sphere
+				var vector = new THREE.Vector3();
+				for ( var i = 0, l = objects.length; i < l; i ++ ) {
+					var phi = Math.acos( -1 + ( 2 * i ) / l );
+					var theta = Math.sqrt( l * Math.PI ) * phi;
+					var object = new THREE.Object3D();
+					object.position.setFromSphericalCoords( 1500, phi, theta );
+					object.position.x = object.position.x + (window.innerWidth/2);
+
+					vector.copy( object.position ).multiplyScalar( 2 );
+					object.lookAt( vector );
+					targets.sphere.push( object );
+				}
+
+				renderer = new THREE.CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
+				animate();
+
+				var button = document.getElementById( 'bid' );
+				button.addEventListener( 'click', function ( event ) {
+					window.dispatchEvent(new Event("bidPressed"));
+					//
+				}, false );
+
+				var button = document.getElementById( 'table' );
+				button.addEventListener( 'click', function ( event ) {
+					transform(targets.table, 500);
+					zoomTo(new THREE.Vector3(cameraStart.x, cameraStart.y, cameraStart.z));
+					//
+				}, false );
+				var button = document.getElementById( 'sphere' );
+
+				if(button){button.addEventListener( 'click', function ( event ) {
+					transform( targets.sphere, 2000 );
+					zoomHome();
+				}, false );}
+
+				var button = document.getElementById( 'helix' );
+
+				if(button){button.addEventListener( 'click', function ( event ) {
+					transform( targets.helix, 2000 );
+				}, false );}
+
+				if(button){var button = document.getElementById( 'grid' );
+				button.addEventListener( 'click', function ( event ) {
+				var event = new Event("cameraZoom");
+		      	event.destination = {x:1, y:1, z:1+500}
+		      	window.dispatchEvent(event);
+					//transform( targets.grid, 2000 );
+				}, false );}
+
+				transform( targets.table, 900 );
+				//
+				window.addEventListener( 'resize', onWindowResize, false );			
+			}
+
+    
+    
+    
+    
+    function drawBoard(event){
+      console.log("drawing board");
+      
+      const objects = [];
+			const targets = { table: [], sphere: [], helix: [], grid: [] };
+      
+      console.dir(event.board);
+      var tileSlots = (event.board) ? event.board.tile_slots : null;
+      var tiles = (event.board) ? event.board.tiles : null;
+      
+			if(!(tileSlots && tiles)) return;
+
+      
+
+      // table
+
+        targets.table = tileSlots.map(function fn(tile){
+          var object = new THREE.Object3D();
+          object.position.x = ( tile.x * 140 ) - 1330;
+          object.position.y = - ( tile.y * 180 ) + 990;
+          return object;
+        });
+
+        tiles.map(function fn(tile, index, array){
+          const element = document.createElement( 'div' );
+          element.className = 'element';
+          element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+
+          const number = document.createElement( 'div' );
+          number.className = 'number';
+          number.textContent = tile.tile_hash;
+          element.appendChild( number );
+
+          const symbol = document.createElement( 'div' );
+          symbol.className = 'symbol';
+          symbol.textContent = tile.tile_label;
+          element.appendChild( symbol );
+
+          const details = document.createElement( 'div' );
+          details.className = 'details';
+          details.innerHTML = tile.slot;
+          element.appendChild( details );
+
+          const objectCSS = new CSS3DObject( element );
+
+          objectCSS.position.x = ( tile.x * 140 ) - 1330;
+          objectCSS.position.y =  ( tile.y * 180 ) + 990;
+          
+          scene.add( objectCSS );
+          objects.push(objectCSS);
+        });
+      
+      console.dir(targets.table);
+      console.dir(objects);
+
+        activeCamera.lookAt(objects[0]);
+      
+
+        // sphere
+
+				const vector = new THREE.Vector3();
+
+				for ( let i = 0, l = objects.length; i < l; i ++ ) {
+
+					const phi = Math.acos( - 1 + ( 2 * i ) / l );
+					const theta = Math.sqrt( l * Math.PI ) * phi;
+
+					const object = new THREE.Object3D();
+
+					object.position.setFromSphericalCoords( 800, phi, theta );
+
+					vector.copy( object.position ).multiplyScalar( 2 );
+
+					object.lookAt( vector );
+
+					targets.sphere.push( object );
+
+				}
+
+				// helix
+
+				for ( let i = 0, l = objects.length; i < l; i ++ ) {
+
+					const theta = i * 0.175 + Math.PI;
+					const y = - ( i * 8 ) + 450;
+
+					const object = new THREE.Object3D();
+
+					object.position.setFromCylindricalCoords( 900, theta, y );
+
+					vector.x = object.position.x * 2;
+					vector.y = object.position.y;
+					vector.z = object.position.z * 2;
+
+					object.lookAt( vector );
+
+					targets.helix.push( object );
+
+				}
+
+				// grid
+
+				for ( let i = 0; i < objects.length; i ++ ) {
+
+					const object = new THREE.Object3D();
+
+					object.position.x = ( ( i % 5 ) * 400 ) - 800;
+					object.position.y = ( - ( Math.floor( i / 5 ) % 5 ) * 400 ) + 800;
+					object.position.z = ( Math.floor( i / 25 ) ) * 1000 - 2000;
+
+					targets.grid.push( object );
+
+				}
+
+
+    }
+
+    function initScene(){
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+        scene = new THREE.Scene();
+        
+    }
+
+    function addCameras(){
+
+      cameraPerspective = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+			cameraPerspective.position.z = 3000;
+      cameraPerspectiveHelper = new THREE.CameraHelper( cameraPerspective );
+      
+      scene.add( cameraPerspectiveHelper );
+      //
+      cameraOrtho = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 150, 3000 );
+      cameraOrthoHelper = new THREE.CameraHelper( cameraOrtho );
+      scene.add( cameraOrthoHelper );
+      //
+      activeCamera = cameraPerspective;
+      activeHelper = cameraPerspectiveHelper;
+
+      //activeCamera = cameraOrtho;
+      //activeHelper = cameraOrthoHelper;
+      // counteract different front orientation of cameras vs rig
+      cameraOrtho.rotation.y = Math.PI;
+      cameraOrtho.rotation.x = 0;
+      cameraOrtho.rotation.z = Math.PI;
+      cameraPerspective.rotation.y = Math.PI;
+      cameraPerspective.rotation.x = 0;
+      cameraPerspective.rotation.z = Math.PI;
+      cameraPerspective.position.z = 0;
+      cameraRig = new THREE.Group();
+      cameraRig.add( cameraPerspective );
+      cameraRig.add( cameraOrtho );
+    
+      scene.add( cameraRig );
+    }
+
+    function addMeshes(){
+      var geometry = new THREE.SphereGeometry( 15, 32, 32 );
+      var material = new THREE.MeshBasicMaterial( {color: 0x000000} );
+      mesh3 = new THREE.Mesh( geometry, material );
+      mesh3.position.z = 0;
+      cameraRig.add( mesh3 );
+      //scene.add(mesh3)
+    }
+
+    function addLight(){
+      var light = new THREE.DirectionalLight( 0xffffff );
+      light.position.set( 0, 2, 1 ).normalize();
+
+      var mesh5 = new THREE.Mesh(
+        new THREE.SphereBufferGeometry( 30, 30, 30 ),
+        new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } )
+      );
+      //light.add(mesh5);
+      scene.add(light);
+    }
+
+   
+
+    function addRenderer(){
+      renderer = new CSS3DRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			container.appendChild( renderer.domElement );
+
+			controls = new TrackballControls( activeCamera, renderer.domElement );
+      controls.minDistance = 500;
+			controls.maxDistance = 6000;
+			controls.addEventListener( 'change', render );
+    }
+
+    function addControlsGui(){
+      var params = {
+        fov: 50,
+        meshX: 0,
+        meshY: 0,
+        meshZ: 0,
+        cardsLoc: mesh3.position.z
+      };
+    }
+
+    function addEventListeners(){
+      window.addEventListener( 'drawBoard', drawBoard, false);
+      //window.addEventListener( 'drawBoard', drawGridBoard, false);
+      window.addEventListener( 'swapTiles', swapTiles, false);
+      window.addEventListener( 'resize', onWindowResize, false );
+      document.addEventListener( 'keydown', onKeyDown, false );
+      window.addEventListener( 'keyDownU', moveCameraOut, false);
+      window.addEventListener( 'keyDownI', moveCameraIn, false);
+      window.addEventListener( 'keyDownLeft', moveCameraLeft, false);
+      window.addEventListener( 'keyDownRight', moveCameraRight, false);
+      window.addEventListener( 'keyDownUp', moveCameraUp, false);
+      window.addEventListener( 'keyDownDown', moveCameraDown, false);
+      window.addEventListener( 'mousemove', onMouseMove, false );
+    }
+   
+
+    function initChannel() {
+
+      switch (document.readyState){
+        case "loading":
+          console.log("readyState: loading");
+          window.setTimeout(initChannel, 10);
+          break;
+        case "interactive":
+          console.log("readyState: interactive (try again in 10ms)");
+          window.setTimeout(initChannel, 10);
+          break;
+        case "complete":
+          console.log("readyState: complete");
+          var event = new Event("doJoinChannel");  //listener is in socket.js
+          event.channel = 'board';
+          event.channel_id = "1";
+          console.log("firing doJoinChannel");
+          document.dispatchEvent(event);
+          break;
+      }
+    }
+
+   
+
+      /*var gui = new dat.GUI();
+			gui.add( params, 'fov', 0, 180 ).step( 1 ).onChange( function( value ) {
+        var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+        cameraPerspective.fov = value;
+			});
+
+      gui.add( params, 'meshX', -3, 3 ).step( .000001 ).onChange( function( value ) {
+        mesh.position.x = 1000 * Math.cos( value );
+        mesh.position.z = 1000 * Math.sin( value );
+        mesh.position.y = 1000 * Math.sin( value );
+      });
+
+      gui.add(params, 'cardsLoc', cameraPerspective.near, cameraPerspective.far).step(1).onChange(function(value) {
+        mesh3.position.z = value;
+      })
+
+			gui.open();*/
+    
+
+    function animate() {
+      requestAnimationFrame( animate );
+      render();
+      //stats.update();
+    }
+
+    function addStarscape(){
+      var geometry = new THREE.BufferGeometry();
+      var vertices = [];
+      for ( var i = 0; i < 10000; i ++ ) {
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // x
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // y
+        vertices.push(  THREE.Math.randFloatSpread( 2000 ) ); // z
+      }
+      geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+      var particles = new THREE.Points( geometry, new THREE.PointsMaterial( { color: 0x888888 } ) );
+      scene.add( particles );
+    }
+
+    function addStats(){
+      stats = new Stats();
+      container.appendChild( stats.dom );
+    }
+
+    function onKeyDown ( event ) {
+      switch( event.keyCode ) {
+        case 79: /*O*/
+          activeCamera = cameraOrtho;
+          activeHelper = cameraOrthoHelper;
+          break;
+        case 80: /*P*/
+          activeCamera = cameraPerspective;
+          activeHelper = cameraPerspectiveHelper;
+          break;
+      }
+    }
+
+    function onWindowResize( event ) {
+      SCREEN_WIDTH = window.innerWidth;
+      SCREEN_HEIGHT = window.innerHeight;
+      aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+      renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+      //camera.aspect = aspect;
+      //camera.updateProjectionMatrix();
+
+      cameraPerspective.aspect = aspect;
+      cameraPerspective.updateProjectionMatrix();
+
+      cameraOrtho.left   = - frustumSize * aspect / 2;
+      cameraOrtho.right  =   frustumSize * aspect / 2;
+      cameraOrtho.top    =   frustumSize / 2;
+      cameraOrtho.bottom = - frustumSize / 2;
+      cameraOrtho.updateProjectionMatrix();
+    }
+
+    function render() {
+      renderer.render( scene, activeCamera );
+    }
+
+    function swapTiles(event ) {
+      //console.log("swapTiles");
+      //console.log(event.tile1);
+      //console.log(event.tile2);
+
+      var card1 = cards[event.tile1.x][event.tile1.y];
+      var card2 = cards[event.tile2.x][event.tile2.y];
+
+      //var card1Color = card1.material.color;
+
+      //card1.material = new THREE.MeshBasicMaterial( { color: card2.material.color, wireframe: false } );
+      //card2.material = new THREE.MeshBasicMaterial( { color: card1Color, wireframe: false } );
+
+    }
+
+    function moveCameraOut(event){
+      console.log('out')
+      activeCamera.zoom = activeCamera.zoom-.1;
+      activeCamera.updateProjectionMatrix();
+      //if(activeCamera.position.z > -8000)
+      //  activeCamera.position.z = activeCamera.position.z-100;
+    }
+
+    function moveCameraIn(event){
+      activeCamera.zoom = activeCamera.zoom+.1;
+      activeCamera.updateProjectionMatrix();
+      //if(activeCamera.position.z < 800)
+      //  activeCamera.position.z = activeCamera.position.z+100;
+      
+    }
+
+    function moveCameraLeft(event){
+      console.log('move left')
+      
+        activeCamera.position.x = activeCamera.position.x-100;
+      
+    }
+    
+    function moveCameraRight(event){
+      console.log('zoom right')
+      activeCamera.position.x = activeCamera.position.x+100;
+      
+    }
+    
+    function moveCameraUp(event){
+      console.log('zoom up')
+      activeCamera.position.y = activeCamera.position.y-100;
+      
+    }
+    
+    function moveCameraDown(event){
+      console.log('zoom down')
+      activeCamera.position.y = activeCamera.position.y+100;
+      
+    }
+
+    function onMouseMove( event ) {
+
+      event.preventDefault();
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    }
+
+  </script>

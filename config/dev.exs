@@ -16,7 +16,7 @@ config :nftVwr, NftVwr.Repo,
 # watchers to your application. For example, we use it
 # with webpack to recompile .js and .css sources.
 config :nftVwr, NftVwrWeb.Endpoint,
-  http: [port: 4000],
+  http: [port: 4001],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
@@ -61,7 +61,9 @@ config :nftVwr, NftVwrWeb.Endpoint,
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
       ~r"lib/nftVwr_web/(live|views)/.*(ex)$",
-      ~r"lib/nftVwr_web/templates/.*(eex)$"
+      ~r"lib/nftVwr_web/templates/.*(eex)$",
+      ~r"lib/nftVwr_web/channels/.*(ex)$",
+      ~r"lib/nftVwr_web/controllers/.*(ex)$"
     ]
   ]
 
