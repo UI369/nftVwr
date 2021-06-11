@@ -77,13 +77,13 @@ gameLobby.join()
       .receive("error", resp => { console.log("Unable to join " + event.channelID, resp) });
   });
 
-  console.log('loadnft event?');
+  
   document.addEventListener( 'loadMyNFTs', function(event){
     console.log("loadMyNFTs event received. Firing load_nfts");
-    gameLobby.push('load_nfts', {body: "testValue"});
+    console.dir(event);
+    gameLobby.push('load_nfts', {event}).receive("ok", resp => { resp.forEach(element => {var event = new Event("newTile"); event.tile = element; window.dispatchEvent(event);})});
   })
 
-  
   if(!game_loaded){
     console.log("firing initGame");
     var event = new Event("initGame");
