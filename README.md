@@ -16,7 +16,7 @@ Now you can now visit [`localhost:4001`](http://localhost:4001) from your browse
 
 ** Dependencies**
 Phoenix/Elixir install guides: https://www.phoenixframework.org/
-Node 15.4.0 (suggested use nvm: https://heynode.com/tutorial/install-nodejs-locally-nvm)
+Node 14.17.0 (suggested use nvm: https://heynode.com/tutorial/install-nodejs-locally-nvm)
 This repo: https://github.com/UI369/nftVwr
 
 ## Learn more
