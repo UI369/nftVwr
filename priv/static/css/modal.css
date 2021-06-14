@@ -1,0 +1,192 @@
+/* The Modal (background) */
+.modal{
+    display: block;
+    position: fixed;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.2s, z-index 0s 0.2s;
+    text-align: center;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+  
+.modal > * {
+    display: inline-block;
+    white-space: normal;
+    vertical-align: middle;
+    text-align: center;
+    margin-bottom:10px;
+}
+
+#modal-button {
+    border: 5px solid rgba(127, 0, 127, .7);
+    text-align:center;
+    background: rgba(0,0,0,1);
+    color:#aaaaaa;
+}
+
+#modal-text {
+    color:#aaaaaa;
+}
+
+#modal-button:hover {
+    border: 5px solid rgba(127, 0, 127, .85);
+    text-align:center;
+    background: rgba(112,0,112,1);
+}
+
+#modal-button:active {
+    border: 5px solid rgba(127, 0, 127, .7);
+    text-align:center;
+    background: rgba(172,0,172,1);
+}
+
+ .modal:before {
+    display: inline-block;
+    overflow: hidden;
+    width: 0;
+    height: 100%;
+    vertical-align: middle;
+    content: "";
+}
+
+.modal-visible .modal {
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+.modal-inner {
+    position: relative;
+    overflow: hidden;
+    max-width: 90%;
+    max-height: 90%;
+    background: #000;
+    z-index: -1;
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s, transform 0.2s, z-index 0s 0.2s;
+    min-width: 500px;
+    border: 5px solid rgba(127, 0, 127, .7);
+}
+.modal-visible .modal-inner {
+    z-index: 100;
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+#modal-content{
+    padding: 50px 70px;
+  
+  /* The Close Button */
+  .close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  .close:hover,
+  .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /*
+
+
+
+ .modal{
+    display: block;
+    position: fixed;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.2s, z-index 0s 0.2s;
+    text-align: center;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+ .modal > * {
+    display: inline-block;
+    white-space: normal;
+    vertical-align: middle;
+    text-align: center;
+    margin-bottom:10px;
+}
+
+#modal-button {
+    border: 5px solid rgba(127, 0, 127, .7);
+    text-align:center;
+    background: rgba(0,0,0,1);
+    color:#aaaaaa;
+}
+
+#modal-text {
+    color:#aaaaaa;
+}
+
+#modal-button:hover {
+    border: 5px solid rgba(127, 0, 127, .85);
+    text-align:center;
+    background: rgba(112,0,112,1);
+}
+
+#modal-button:active {
+    border: 5px solid rgba(127, 0, 127, .7);
+    text-align:center;
+    background: rgba(172,0,172,1);
+}
+
+ .modal:before {
+    display: inline-block;
+    overflow: hidden;
+    width: 0;
+    height: 100%;
+    vertical-align: middle;
+    content: "";
+}
+
+.modal-visible .modal {
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+.modal-inner {
+    position: relative;
+    overflow: hidden;
+    max-width: 90%;
+    max-height: 90%;
+    background: #000;
+    z-index: -1;
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s, transform 0.2s, z-index 0s 0.2s;
+    min-width: 500px;
+    border: 5px solid rgba(127, 0, 127, .7);
+}
+.modal-visible .modal-inner {
+    z-index: 100;
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+#modal-content{
+    padding: 50px 70px;
+}*/
