@@ -1,5 +1,7 @@
 # NftVwr
-Technical Specifications
+
+Specs for Zilliqa Judges: https://docs.google.com/document/d/1fuo_g4D_VZfBQtlpldwNpvDVBLqQyXZNgxvBcHRR44E/edit?usp=sharing
+
 
 
 **To start your Phoenix server:**
