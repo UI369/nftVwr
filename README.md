@@ -15,7 +15,7 @@ Specs for Zilliqa Judges: https://docs.google.com/document/d/1fuo_g4D_VZfBQtlpld
 Now you can now visit [`localhost:4001`](http://localhost:4001) from your browser.
 
 ** Dependencies**
-Phoenix/Elixir install guides: https://www.phoenixframework.org/
+Phoenix/Elixir 1.9.1, Mix 1.9.1 (compiled with Erlang/OTP 22) - install guides: https://hexdocs.pm/phoenix/installation.html#content
 Node 14.17.0 (suggested use nvm: https://heynode.com/tutorial/install-nodejs-locally-nvm)
 This repo: https://github.com/UI369/nftVwr
 
