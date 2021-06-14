@@ -6,11 +6,11 @@ Specs for Zilliqa Judges: https://docs.google.com/document/d/1fuo_g4D_VZfBQtlpld
 
 **To start your Phoenix server:**
 
-  * Install dependencies with `mix deps.get`
-  * Create and migrate your database with `mix ecto.setup`
-  * Install Node.js dependencies with `npm install` inside the `assets` directory
-  * Clone this repo
-  * from NftVwr root folder, start Phoenix endpoint with `mix phx.server` in project root
+  1) Clone this repo
+  2) Install dependencies with `mix deps.get`
+  3) (optional) Create and migrate your database with `mix ecto.setup` 
+  4) Install Node.js dependencies with `npm install` inside the `assets` directory
+  5) from NftVwr root folder, start Phoenix endpoint with `mix phx.server` in project root
 
 Now you can now visit [`localhost:4001`](http://localhost:4001) from your browser.
 
