@@ -8,7 +8,8 @@ defmodule NftVwr.Application do
   def start(_type, _args) do
     children = [
       # Start the Ecto repository
-      NftVwr.Repo,
+      #NftVwr.Repo,
+
       # Start the Telemetry supervisor
       NftVwrWeb.Telemetry,
       # Start the PubSub system

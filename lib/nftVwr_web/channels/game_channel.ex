@@ -6,6 +6,7 @@ defmodule NftVwrWeb.GameChannel do
   alias NftVwrWeb.ZilliqaAPI
 
   def channel do
+    :ets.new(:nft, [:named_table])
     quote do
       import NftVwr.Gettext
     end
@@ -25,17 +26,47 @@ defmodule NftVwrWeb.GameChannel do
     {:ok, reply, assign(socket, :user_id, "my_user1")}
   end
 
-  def handle_in("load_nfts", _payload, socket) do
-    contractState = ZilliqaAPI.getContractState();
+  def handle_in("load_nfts", payload, socket) do
+
+    nftContractBech32 = payload["event"]["contract_address"];
+    userAddress = payload["event"]["userAddress"];
+
+    #TODO do some check on address to start with Zil and be right lenght
+
+    {:ok, contractState} = ZilliqaAPI.getContractState(nftContractBech32);
+    #{:ok, transactionState} = ZilliqaAPI.getTransactions("zil1qw2ujn75tdrk5gg2w4ysd2z9lefgtchael4ucy");
+    #IO.inspect(transactionState);
     {:ok, body} = Jason.decode(contractState.body);
-
-
 
     response = body
     |> Map.get("result")
     |> Map.take(["owned_token_count", "token_id_count", "token_owners", "token_uris", "total_supply"])
+
     IO.inspect(response);
+
+    token_id_count = response["token_id_count"];
+    token_owners = response["token_owners"];
+    IO.puts("filter:");
+    owned_tokens = Enum.filter(token_owners, fn {id, owner} ->
+      (String.upcase(owner) == String.upcase(userAddress["base16"])) #TODO Uncomment this!
+      #(String.upcase(owner) == String.upcase("0xc1316a8ba720cc321a1abbf7c0f28e8cbcaec7b0"))
+    end)
+    |> Enum.map(fn {id, _owner} -> id end)
+    IO.inspect(owned_tokens);
+
+    result = Enum.map(owned_tokens, fn id ->
+      %{ "token_id" => id, "token_uri" => response["token_uris"][id], "contract_address" => nftContractBech32, "tile_location" => %{"tileSlot_x" => payload["event"]["tileSlot_x"], "tileSlot_y" => payload["event"]["tileSlot_y"], "tileSlot_hash" => payload["event"]["tileSlot_hash"]}}
+    end);
+
+    IO.puts("owned tokens---");
+    IO.inspect(result);
+    IO.puts("owned tokens---");
+
+    #:ets.insert(:nft, {1, response});
+    #:ets.lookup(:nft, 1);
+    #IO.inspect(response);
     {:noreply, socket}
+    {:reply, {:ok, result}, socket}
   end
 
   def join("board:" <> board_id, _payload, socket) do
@@ -67,10 +98,10 @@ defmodule NftVwrWeb.GameChannel do
         %{hash: "boardName_33", x: 3, y: 3},
       ],
       tiles: [
-        %{tile_ID: "1", tile_label: "My NFT1", tile_hash: "zil03553...", x: 1, y: 1, boardHash: "boardCreator"},
-        %{tile_ID: "2", tile_label: "My NFT2", tile_hash: "zil03554...", x: 1, y: 2, boardHash: "boardCreator"},
-        %{tile_ID: "3", tile_label: "My NFT3", tile_hash: "zil03553...", x: 1, y: 3, boardHash: "boardCreator"},
-        %{tile_ID: "5", tile_label: "My NFT4", tile_hash: "zil03554...", x: 2, y: 1, boardHash: "boardCreator"}
+        %{tile_ID: "1", tile_label: "My NFT1", tile_hash: "boardName_tile_11", x: 1, y: 1, boardHash: "boardCreator"},
+        %{tile_ID: "2", tile_label: "My NFT2", tile_hash: "boardName_tile_12", x: 1, y: 2, boardHash: "boardCreator"},
+        %{tile_ID: "3", tile_label: "My NFT3", tile_hash: "boardName_tile_13", x: 1, y: 3, boardHash: "boardCreator"},
+        %{tile_ID: "5", tile_label: "My NFT4", tile_hash: "boardName_tile_21", x: 2, y: 1, boardHash: "boardCreator"}
       ]
     }
       #tile_slot: %{x: 4,
