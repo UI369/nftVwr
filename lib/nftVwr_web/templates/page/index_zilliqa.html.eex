@@ -1,0 +1,593 @@
+
+
+	
+
+		<img src="<%= Routes.static_path(@conn, "/images/BANDSTOCK_MUSICIAN_NFT.png") %>"></img>
+		
+		<div id="container"></div>
+		<div id="menu">
+			<!-- button id="table">TABLE</button>
+			<button id="sphere">SPHERE</button>
+			<button id="helix">HELIX</button>
+			<button id="grid">GRID</button -->
+			<button id="zilpayButton" class="outerButton">ZilPay</button>
+			<button id="resetButton" class="outerButton" style="display: none">Close</button>
+			<!-- button id="loadNFTsButton" class="outerButton">Load NFTs</button -->
+			
+		</div>
+		
+	
+		<script type="module">
+
+			import * as THREE from "<%= Routes.static_path(@conn, "/js/three.module.js") %>";
+			import { TWEEN } from "<%= Routes.static_path(@conn, "/js/tween.module.min.js") %>";
+            import { TrackballControls } from "<%= Routes.static_path(@conn, "/js/TrackballControls.js") %>";
+			import { CSS3DRenderer, CSS3DObject } from "<%= Routes.static_path(@conn, "/js/CSS3DRenderer.js") %>";
+			
+
+			//var ee = new EventEmitter();
+			
+ 			window.addEventListener( 'drawBoard', drawBoard, false);
+			window.addEventListener( 'showProfile', displayProfileOverlay, false);
+			window.addEventListener( 'hideProfile', hideProfileOverlay, false);
+			document.addEventListener( 'tileSlotClicked', showNFTAddressGetter, false);
+			window.addEventListener( 'newTile', addNewTile, false);
+
+			//var form = document.getElementById("NFTForm");
+			//form.addEventListener('submit', doFormSubmit);
+			  
+			const resetButton = document.getElementById( 'resetButton' );
+			if(resetButton) {resetButton.addEventListener('click', resetScreen)}
+			const loadNFTsButton = document.getElementById('loadNFTsButton');
+			if(loadNFTsButton) {loadNFTsButton.addEventListener('click', loadNFTs)}
+
+			var userAddress = {};
+
+			setupZilPay();
+
+			function setupZilPay(){
+				//get a reference to the ZilPay button on the screen. 
+				const zilpayButton = document.getElementById( 'zilpayButton' );
+
+				// If ZilPay is here, watch for click. When clicked ask ZilPay for wallet info. 
+				if(zilpayButton){
+					zilpayButton.addEventListener( 'click', function () {
+
+						if(window.zilPay){
+							window.zilPay.wallet.connect();
+
+							if(window.zilPay.wallet.defaultAccount){
+								console.log(window.zilPay.wallet.defaultAccount);
+								var event = new Event("showProfile");
+								event.walletID = window.zilPay.wallet.defaultAccount;
+								//Dispatch a "zilPayConnected" event with walletID as a property. 
+								window.dispatchEvent(event);
+							}						
+						}
+					} );
+				}
+			}
+
+			initChannel()
+
+            let camera, scene, renderer;
+            let controls;
+			let boardDrawn = false;
+			const tileWidth = 128;
+			const tileHeight = 192;
+			const tileMargins = 20;
+
+			const objects = [];
+			const overlay_objects = [];
+			const targets = { table: [], sphere: [], helix: [], grid: [], overlay_table: [] };
+
+			var tileSlots = [];
+			init();
+			animate();
+
+			function init() {
+				
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				//camera = new THREE.OrthographicCamera( window.innerWidth/-2, window.innerHeight/2, window.innerWidth/2, window.innerHeight/-2, 1, 10000 );
+				camera.position.z = 3000;		
+				camera.position.x = 0;		
+				camera.position.y = 0;				
+				scene = new THREE.Scene();// table
+
+				renderer = new CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+				controls = new TrackballControls( camera, renderer.domElement );
+				controls.minDistance = 1500;
+				controls.maxDistance = 6000;
+				controls.addEventListener( 'change', render );
+
+				const params = {
+						NFT_Address: "This is a placeholder text"
+				}
+				
+				/*const gui = new dat.GUI();
+				gui.add(params, "NFT_Address").onFinishChange(function (value) {
+					//Do something with the new value
+					console.log(value);
+				});*/
+
+				window.addEventListener( 'resize', onWindowResize );
+			}
+
+			function addNewTile(event){
+				console.log("addNewTile:");
+				console.dir(event);
+
+				var xOffset = -800;
+				var yOffset = 440;
+
+				var newTile = createTile({
+							x: event.tile.tile_location.tileSlot_x, y: event.tile.tile_location.tileSlot_y,
+							tile_ID: event.tile.token_id,
+							tile_label: event.tile.contract_address, 
+							hash: event.tile.token_uri
+						}, xOffset, yOffset);
+
+					scene.add(newTile);
+					overlay_objects.push( newTile );
+
+					overlay_transform( targets.overlay_table, 2000 );
+			}
+
+						
+    /*{
+		"contract_address": "zil1fkesj7705lstmyk4h9psj5n8qw4034c5a2r2an",
+    "tile_location": {
+        "tileSlot_hash": "overlayboard_20",
+        "tileSlot_x": 2,
+        "tileSlot_y": 0
+    },
+    "token_id": "5",
+    "token_uri": "https://zildata.mintable.app/wAfbkbNJiWu-FdjNY54i/5"
+	}*/
+			
+
+			
+			function drawBoard(event){
+
+				if(!boardDrawn){
+					createScreenBorder();
+					
+					var group = new THREE.Group();
+					group.name = "tile_board_1";
+
+					var xOffset = -800;
+					var yOffset = 440;
+					
+					var tileSlots = createGridOfTileSlots(event.board.tile_slots, xOffset, yOffset, 15);				
+					
+					var tileSlotTable = tileSlots.forEach((ts) => {
+						ts.visible=true;
+						group.add(ts);
+						scene.add(ts);
+						targets.table.push(ts);
+						return ts;
+					});
+
+
+					var tileTable = event.board.tiles.forEach(function fn(tile){
+						var newTile = createTile({
+							x: tile.x, y: tile.y, 
+							tile_ID: tile.tile_ID, 
+							tile_label: tile.tile_label, 
+							hash: tile.tile_hash
+						}, xOffset, yOffset, 800);
+
+						scene.add(newTile);
+						objects.push( newTile );
+						return newTile;
+					})
+
+					transform( targets.table, 2000 );
+					boardDrawn = true;
+
+					createProfileOverlay();
+				}
+			}
+
+			function createTileSlot(tileSlot, posX=0, posY=0, posZ = 0, color = 'rgba(0,127,127,.5)'){
+				const element = document.createElement( 'div' );
+				element.id = tileSlot.hash;
+				element.className = 'element';
+				element.style.border = '5px solid ' + color;
+				element.bsProp = {x: tileSlot.x, y: tileSlot.y, hash: tileSlot.hash, type:"tile_slot"};
+				//element.style.backgroundColor = color;
+
+				const objectCSS = new CSS3DObject( element );
+				objectCSS.position.x = (tileSlot.x * (tileWidth + tileMargins)) + posX; 
+				objectCSS.position.y = -(tileSlot.y * (tileHeight + tileMargins)) + posY;
+				objectCSS.position.z = posZ;
+
+				element.addEventListener( 'click', function () {
+					console.log("clickity");
+					console.dir(element.bsProp);
+					var event = new Event("tileSlotClicked");  //listener is in socket.js
+					event.data = element.bsProp;
+					document.dispatchEvent(event);
+				} );
+
+				return objectCSS;
+			}
+
+			function createGridOfTileSlots(tileSlots, x, y, z, c){
+				return tileSlots.map((ts) => {
+					return createTileSlot(ts, x, y, z, c);
+				})
+			}
+			
+			function createTile(tile, posX=0, posY=0, posZ=250, color='rgba(0,127,127,.5)'){
+				const element = document.createElement( 'div' );
+				element.className = 'element';
+				element.ID = tile.tile_ID;
+				element.style.backgroundColor = color;
+				element.bsProp = {x: tile.x, y: tile.y, hash: tile.hash, type:"tile"};
+
+				const number = document.createElement( 'div' );
+				number.className = 'number';
+				number.textContent = tile.tile_ID;
+				element.appendChild( number );
+
+				const symbol = document.createElement( 'div' );
+				symbol.className = 'symbol';
+				symbol.textContent = tile.tile_ID;
+				element.appendChild( symbol );
+
+				const details = document.createElement( 'div' );
+				details.className = 'details';
+				details.innerHTML = tile.tile_label.substring(0, 20);
+				element.appendChild( details );
+
+				var objectCSS = new CSS3DObject( element );
+				objectCSS.position.x = (tile.x * (tileWidth + tileMargins)) + posX;
+				objectCSS.position.y = -(tile.y * (tileHeight + tileMargins)) + posY;
+				objectCSS.position.z = posZ;
+
+				
+				element.addEventListener( 'click', function () {
+					console.dir(element.bsProp);
+				} );
+
+				return objectCSS;
+			}
+
+			function initChannel() {
+				switch (document.readyState){
+					case "loading":
+					console.log("readyState: loading");
+					window.setTimeout(initChannel, 10);
+					break;
+					case "interactive":
+					console.log("readyState: interactive (try again in 10ms)");
+					window.setTimeout(initChannel, 10);
+					break;
+					case "complete":
+					console.log("readyState: complete");
+					var event = new Event("doJoinChannel");  //listener is in socket.js
+					event.channel = 'board';
+					event.channel_id = "1";
+					console.log("firing doJoinChannel");
+					document.dispatchEvent(event);
+					break;
+				}
+			}
+
+			function overlay_transform( targets, duration ) {
+
+				TWEEN.removeAll();
+
+				for ( let i = 0; i < overlay_objects.length; i ++ ) {
+
+					const object = overlay_objects[ i ];
+					const target = targets[ i ];
+
+					new TWEEN.Tween( object.position )
+						.to( { x: target.position.x, y: target.position.y, z: target.position.z+15 }, duration )
+						.easing( TWEEN.Easing.Exponential.Out )
+						.start();
+
+					new TWEEN.Tween( object.rotation )
+						.to( { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, duration )
+						.easing( TWEEN.Easing.Elastic.In )
+						.start();
+
+				}
+
+				new TWEEN.Tween( this )
+					.to( {}, duration * 2 )
+					.onUpdate( render )
+					.start();
+
+			}
+
+
+			function transform( targets, duration ) {
+
+				TWEEN.removeAll();
+
+				for ( let i = 0; i < objects.length; i ++ ) {
+
+					const object = objects[ i ];
+					const target = targets[ i ];
+
+					new TWEEN.Tween( object.position )
+						.to( { x: target.position.x, y: target.position.y, z: target.position.z+10 }, duration )
+						.easing( TWEEN.Easing.Exponential.Out )
+						.start();
+
+					new TWEEN.Tween( object.rotation )
+						.to( { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, duration )
+						.easing( TWEEN.Easing.Elastic.In )
+						.start();
+
+				}
+
+				new TWEEN.Tween( this )
+					.to( {}, duration * 2 )
+					.onUpdate( render )
+					.start();
+
+			}
+
+			function createProfileOverlay() {
+
+				var color = 'rgba(127,0,127,.25)';
+
+				//create outer overlay w/border
+				const overlay = document.createElement( 'div' );
+				overlay.className = 'overlay';
+				overlay.ID = 'profile_overlay';
+				
+				//Create thh wallet ID
+				const walletID = document.createElement( 'div' );
+				walletID.id = "profile_overlay_wallet_id";
+				walletID.className = 'wallet_id';
+				walletID.textContent = "event.walletID.bech32";
+				overlay.appendChild( walletID );
+
+				//Add both to a CSS Object
+				var objectCSS = new CSS3DObject( overlay );
+				objectCSS.name = "profileOverlay_outline";
+				objectCSS.position.x = 0;
+				objectCSS.position.y = 200;
+				objectCSS.position.z = 250;
+
+				//create inner 9 tile slots
+				var tileSlots = [];
+				for(var i = 0; i < 9; i++){
+					tileSlots.push({hash:"overlayboard_" + Math.floor(i/3) + (i%3), x: Math.floor(i/3), y: i%3});
+				}
+				
+				var profileTileSlots = createGridOfTileSlots(tileSlots, objectCSS.position.x-600, objectCSS.position.y+200, objectCSS.position.z+50, color);				
+
+				var group = new THREE.Group();
+				group.name = "profileOverlay";
+
+				group.add(objectCSS)
+				profileTileSlots.forEach((tileSlot) => {
+					tileSlot.visible=false;
+					group.add(tileSlot);
+					targets.overlay_table.push(tileSlot);
+					});
+
+				group.visible = false;
+				objectCSS.visible = false;
+				
+				overlay.addEventListener( 'click', function () {
+					console.log("click event on overlay" + walletID.textContent)
+				} );
+
+				scene.add(group);
+			}
+
+			function createScreenBorder() {
+				const border = document.createElement( 'div' );
+				border.className = 'screenBorder';
+				border.ID = 'screen_border';
+				
+
+				var objectCSS = new CSS3DObject( border );
+				
+				objectCSS.element.style.width = window.innerWidth;
+
+				objectCSS.name = "screen_border";
+				objectCSS.position.x = 0;
+				objectCSS.position.y = 0;
+				objectCSS.position.z = 0;
+				objectCSS.visible = true;
+
+				var group = new THREE.Group();
+				group.name = "screen_border_group";
+				group.add(objectCSS)
+
+				scene.add(group);
+			}
+
+			function doFormSubmit(event){
+				event.preventDefault();  
+				console.log("form submitted");
+				console.log(data);
+			}
+
+			function showNFTAddressGetter(event) {
+
+
+				var nftAddress = window.prompt("Enter your NFT Contract Address","zil...");
+				var payload = {nftAddress: nftAddress, tileSlot_x: event.data.x, tileSlot_y: event.data.y, tileSlot_hash: event.data.hash};
+				loadNFTs(payload);
+				console.dir("show...");
+				console.dir(payload);
+
+/*
+				console.log("in showNFTAddressGetter");
+				var myModalMsg = document.getElementById("nft_modal_msg");
+				myModalMsg.innerHTML = "Enter NFT Contract Address for Tile Slot (" + event.data.x + "," + event.data.y + ")";
+
+				var modalButton = document.getElementById("modal-button");
+				console.log("definitely have a modal button:");
+				console.dir(modalButton);
+
+				console.log("adding an event listener to it (click)");
+				modalButton.addEventListener('click', modalButtonClicked);
+				
+				document.addEventListener( 'modalButtonClicked', function (event) {
+					console.dir(event);
+					var modalButtonValue = document.getElementById("modal-text").value;
+					console.log("click event on popup" + modalButtonValue);
+				} );
+*/
+
+
+
+				/*console.log("in showNFTAddressGetter");
+				console.dir(event);
+				var color = 'rgba(127,0,127,.25)';
+
+				//create outer overlay w/border
+				const popup = document.createElement( 'div' );
+				popup.className = event.data.hash + "_popup";
+				popup.id = event.data.hash + "_popup";
+
+				//Create the message
+				const messageText = document.createElement( 'div' );
+				messageText.id = event.data.hash + "_popup_message";
+				messageText.className = "popup_message"
+				messageText.textContent = "Enter an NFT Contract Address and Token ID";
+				popup.appendChild( messageText );
+
+				//Create the text input
+				const addressForm = document.createElement( 'form' );
+				addressForm.id = event.data.hash + "_popup_form";
+				addressForm.className = "popup_form"
+				addressForm.style = "background-color: white";
+				
+
+				//Create the text input
+				const addressInput = document.createElement( 'input' );
+				addressInput.id = event.data.hash + "_popup_nftaddress";
+				addressInput.className = "popup_input"
+				addressInput.type = "text";
+				addressForm.appendChild( addressInput );
+
+				//Create the text input
+				const tokenIDInput = document.createElement( 'input' );
+				tokenIDInput.id = event.data.hash + "_popup_tokenidinput";
+				tokenIDInput.className = "popup_input"
+				tokenIDInput.type = "text";
+				addressForm.appendChild( tokenIDInput );
+
+				popup.appendChild( addressForm );
+				
+
+				//Add both to a CSS Object
+				var myModal = document.getElementById("modalContent");
+				var objectCSS = new CSS3DObject( myModal );
+				objectCSS.name = "popup_object";
+				objectCSS.position.x = 100;
+				objectCSS.position.y = 200;
+				objectCSS.position.z = 2000;
+
+				var group = new THREE.Group();
+				group.name = "popup";
+				group.add(objectCSS)
+				group.visible = true;
+				objectCSS.visible = true;
+				
+				popup.addEventListener( 'click', function () {
+					console.log("click event on popup" + popup.id)
+				} );
+
+				scene.add(group);*/
+
+
+			}
+
+
+			function displayProfileOverlay(event) {
+				var profileOverlayGroup = scene.getObjectByName("profileOverlay");
+
+				var profileOverlayDiv = profileOverlayGroup.getObjectByName("profileOverlay_outline");
+				profileOverlayDiv = profileOverlayDiv.element;
+
+				var walletID = profileOverlayDiv.childNodes[0];
+				walletID.textContent=event.walletID.bech32;
+				userAddress = event.walletID;
+				
+
+				profileOverlayGroup.visible = true;
+				profileOverlayGroup.children.map(function(node){
+					node.visible = true;
+				})
+
+				const zilpayButton = document.getElementById( 'zilpayButton' );
+				zilpayButton.style = "display: none";
+				const resetButton = document.getElementById( 'resetButton' );
+				resetButton.style = "display: absolute";
+				render();
+			}
+
+			function hideProfileOverlay() {
+				var profileOverlayGroup = scene.getObjectByName("profileOverlay");
+				profileOverlayGroup.visible = false;
+				profileOverlayGroup.children.forEach(function(node){
+					node.visible = false;
+				})
+
+				const resetButton = document.getElementById( 'resetButton' );
+				resetButton.style = "display: none";
+				const zilpayButton = document.getElementById( 'zilpayButton' );
+				zilpayButton.style = "display: absolute";
+
+				render();
+			}
+
+			function resetScreen(event) {
+				//controls.reset();
+				hideProfileOverlay();
+			}
+
+			function loadNFTs(payload) {
+				var event = new Event("loadMyNFTs");
+				event.contract_address = payload.nftAddress;
+				event.userAddress = userAddress;
+				event.tileSlot_x = payload.tileSlot_x;
+				event.tileSlot_y = payload.tileSlot_y;
+				event.tileSlot_hash = payload.tileSlot_hash;
+
+				//Dispatch a "zilPayConnected" event with walletID as a property. 
+				document.dispatchEvent(event);
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				render();
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				TWEEN.update();
+
+				controls.update();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+		</script>
+
+		
