@@ -11,6 +11,7 @@
 			<button id="helix">HELIX</button>
 			<button id="grid">GRID</button -->
 			<button id="zilpayButton" class="outerButton">ZilPay</button>
+			<button id="metamaskButton" class="outerButton">MetaMask</button>
 			<button id="resetButton" class="outerButton" style="display: none">Close</button>
 			<!-- button id="loadNFTsButton" class="outerButton">Load NFTs</button -->
 			
@@ -44,6 +45,7 @@
 			var userAddress = {};
 
 			setupZilPay();
+			setupMetaMask();
 
 			function setupZilPay(){
 				//get a reference to the ZilPay button on the screen. 
@@ -52,7 +54,7 @@
 				// If ZilPay is here, watch for click. When clicked ask ZilPay for wallet info. 
 				if(zilpayButton){
 					zilpayButton.addEventListener( 'click', function () {
-
+						
 						if(window.zilPay){
 							window.zilPay.wallet.connect();
 
@@ -66,6 +68,21 @@
 						}
 					} );
 				}
+			}
+
+			function setupMetaMask(){
+				//get a reference to the ZilPay button on the screen. 
+				const metamaskButton = document.getElementById( 'metamaskButton' );
+				metamaskButton.addEventListener('click', () => {
+					console.log(getAccount());
+				});
+			}
+
+			async function getAccount() {
+				const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+				const account = accounts[0];
+				//showAccount.innerHTML = account;
+				return accounts;
 			}
 
 			initChannel()
